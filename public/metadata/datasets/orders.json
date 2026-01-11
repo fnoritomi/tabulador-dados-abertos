@@ -1,0 +1,76 @@
+{
+    "id": "orders",
+    "name": "Orders Dataset",
+    "sources": [
+        "https://shell.duckdb.org/data/tpch/0_01/parquet/orders.parquet"
+    ],
+    "schema": [
+        {
+            "name": "o_orderkey",
+            "type": "INTEGER"
+        },
+        {
+            "name": "o_custkey",
+            "type": "INTEGER"
+        },
+        {
+            "name": "o_orderstatus",
+            "type": "VARCHAR"
+        },
+        {
+            "name": "o_totalprice",
+            "type": "DECIMAL"
+        },
+        {
+            "name": "o_orderdate",
+            "type": "DATE"
+        },
+        {
+            "name": "o_orderpriority",
+            "type": "VARCHAR"
+        },
+        {
+            "name": "o_clerk",
+            "type": "VARCHAR"
+        },
+        {
+            "name": "o_shippriority",
+            "type": "INTEGER"
+        },
+        {
+            "name": "o_comment",
+            "type": "VARCHAR"
+        }
+    ],
+    "semantic": {
+        "dimensions": [
+            {
+                "name": "o_orderkey",
+                "type": "INTEGER",
+                "label": "Order id"
+            },
+            {
+                "name": "o_orderstatus",
+                "type": "VARCHAR",
+                "label": "Order Status"
+            },
+            {
+                "name": "o_orderpriority",
+                "type": "VARCHAR",
+                "label": "Priority"
+            }
+        ],
+        "measures": [
+            {
+                "name": "count_orders",
+                "sql": "COUNT(*)",
+                "label": "Total Orders"
+            },
+            {
+                "name": "sum_revenue",
+                "sql": "SUM(o_totalprice)",
+                "label": "Total Revenue"
+            }
+        ]
+    }
+}

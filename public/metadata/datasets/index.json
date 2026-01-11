@@ -1,0 +1,12 @@
+[
+    {
+        "id": "demo",
+        "name": "Demo Dataset (Lineitem)",
+        "path": "/metadata/datasets/demo.json"
+    },
+    {
+        "id": "orders",
+        "name": "Orders Dataset",
+        "path": "/metadata/datasets/orders.json"
+    }
+]

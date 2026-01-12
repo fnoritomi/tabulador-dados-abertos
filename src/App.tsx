@@ -162,7 +162,7 @@ function App() {
     setMeasureFilters(measureFilters.map(f => f.id === id ? { ...f, [field]: value } : f));
   };
 
-  const getSql = () => {
+  const getSql = (ignoreLimit: boolean = false) => {
     if (!activeDataset) return '';
     const parquetUrl = activeDataset.sources[0];
 
@@ -224,13 +224,15 @@ function App() {
         }
       }
 
-      return `SELECT ${selectClause || '*'} FROM read_parquet('${parquetUrl}') ${whereClause} ${groupByClause} ${havingClause} LIMIT ${limit}`;
+      const limitClause = ignoreLimit ? '' : `LIMIT ${limit}`;
+      return `SELECT ${selectClause || '*'} FROM read_parquet('${parquetUrl}') ${whereClause} ${groupByClause} ${havingClause} ${limitClause}`;
     }
 
     // Raw Mode
     const activeCols = [...selectedColumns, ...selectedDimensions];
     const cols = activeCols.length > 0 ? activeCols.join(', ') : '*';
-    return `SELECT ${cols} FROM read_parquet('${parquetUrl}') ${whereClause} LIMIT ${limit}`;
+    const limitClause = ignoreLimit ? '' : `LIMIT ${limit}`;
+    return `SELECT ${cols} FROM read_parquet('${parquetUrl}') ${whereClause} ${limitClause}`;
   };
 
   useEffect(() => {
@@ -260,6 +262,71 @@ function App() {
     } catch (err: any) {
       console.error(err);
       setError(err.message || 'Erro ao executar consulta');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleExportCsv = async () => {
+    if (!db || !activeDataset) return;
+    setLoading(true);
+
+    try {
+      // 1. Get SQL without limit (or very high limit)
+      // We need to bypass the limit set in UI for export
+      const exportSql = getSql(true);
+
+      let fileHandle: any = null;
+      let writable: any = null;
+
+      // 2. Try File System Access API
+      try {
+        // @ts-ignore - Trigger 'Save As' dialog
+        fileHandle = await window.showSaveFilePicker({
+          suggestedName: `export_${activeDataset.id}_${Date.now()}.csv`,
+          types: [{
+            description: 'Comma Separated Values',
+            accept: { 'text/csv': ['.csv'] },
+          }],
+        });
+        writable = await fileHandle.createWritable();
+      } catch (err: any) {
+        if (err.name === 'AbortError') {
+          setLoading(false);
+          return; // User cancelled
+        }
+        console.warn('File System Access API likely not supported, falling back to Blob download currently not fully implemented for streaming large files in this iteration.', err);
+        // Fallback could be implemented here but plan focuses on FS API predominantly.
+        // For now, let's proceed with just FS API or error out if critical.
+        setError("Seu navegador não suporta salvamento direto ou foi bloqueado. Tente usar Chrome/Edge.");
+        setLoading(false);
+        return;
+      }
+
+      // 3. Streaming Execution
+      const conn = await db.connect();
+      const results = await conn.send(exportSql);
+
+      // 4. Transform and Stream Write
+      const { arrowBatchToCsv } = await import('./lib/csvUtils');
+
+      let isFirstBatch = true;
+      // Depending on version, conn.send might return a Table (materialized) or an AsyncIterator.
+      // If it is a Table (as TS suggests by inferring StructRow on default iteration), we should iterate its batches.
+      const batches = (results as any).batches || results;
+
+      for await (const batch of batches) {
+        const csvChunk = arrowBatchToCsv(batch, isFirstBatch);
+        await writable.write(csvChunk);
+        isFirstBatch = false;
+      }
+
+      await writable.close();
+      await conn.close();
+
+    } catch (err: any) {
+      console.error(err);
+      setError('Erro ao exportar CSV: ' + err.message);
     } finally {
       setLoading(false);
     }
@@ -500,11 +567,29 @@ function App() {
             backgroundColor: '#007bff',
             color: 'white',
             border: 'none',
-            borderRadius: '4px'
+            borderRadius: '4px',
+            marginRight: '10px'
           }}
         >
           {loading ? 'Executando...' : 'Executar consulta'}
         </button>
+
+        <button
+          onClick={handleExportCsv}
+          disabled={!db || loading || !activeDataset}
+          style={{
+            padding: '10px 20px',
+            fontSize: '16px',
+            cursor: (!db || loading || !activeDataset) ? 'not-allowed' : 'pointer',
+            backgroundColor: '#28a745',
+            color: 'white',
+            border: 'none',
+            borderRadius: '4px'
+          }}
+        >
+          Exportar CSV (Stream)
+        </button>
+
         {executionTime && (
           <span style={{ marginLeft: '10px', color: '#666' }}>
             Tempo: {executionTime.toFixed(2)}ms

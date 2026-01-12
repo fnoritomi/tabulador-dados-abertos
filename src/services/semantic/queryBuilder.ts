@@ -9,7 +9,29 @@ export const buildSql = (
     ignoreLimit: boolean = false
 ): string => {
     if (!activeDataset) return '';
-    const parquetUrl = activeDataset.sources[0];
+
+    const normalizePath = (p: string) => {
+        // Convert backslashes
+        const normalized = p.replace(/\\/g, '/');
+        // Try to make it relative to public folder if absolute
+        if (normalized.includes('/public/')) {
+            const relativePath = '/' + normalized.split('/public/')[1];
+            // DuckDB-WASM needs full URL to trigger HTTP loading instead of local VFS
+            if (typeof window !== 'undefined') {
+                return `${window.location.origin}${relativePath}`;
+            }
+            return relativePath;
+        }
+        return normalized;
+    };
+
+    const sources = activeDataset.sources.map(normalizePath);
+    // Use list syntax for multiple files, or single string for one (to keep simple SQL readable)
+    // Actually, read_parquet accepts list for single file too, but let's be adaptive.
+    const parquetSource = sources.length > 1
+        ? `[${sources.map(s => `'${s}'`).join(', ')}]`
+        : `'${sources[0]}'`;
+
     const { selectedColumns, selectedDimensions, selectedMeasures, limit } = queryState;
 
     // Helper to determine mode
@@ -43,7 +65,18 @@ export const buildSql = (
 
         const semiAdditiveMeasures = Array.from(allMeasuresToCheck).filter(m => {
             const def = activeDataset.semantic?.measures.find(d => d.name === m);
-            return !!def?.non_additive_dimension;
+            if (!def?.non_additive_dimension) return false;
+
+            const nad = def.non_additive_dimension;
+            // Condition: Apply semi-additive logic IF:
+            // 1. The non-additive dimension is NOT selected
+            // OR
+            // 2. There are window groupings defined (meaning we need to partition by specific dims anyway)
+
+            const isNonAdditiveDimSelected = selectedDimensions.includes(nad.dimension_name);
+            const hasGroupings = !!nad.window_groupings;
+
+            return !isNonAdditiveDimSelected || hasGroupings;
         });
 
         // Optimization: Check optimization for QUALIFY
@@ -90,7 +123,7 @@ export const buildSql = (
         const sourceCte = `
         ${sourceCteName} AS (
             SELECT ${cteSelects.join(', ')}
-            FROM read_parquet('${parquetUrl}')
+            FROM read_parquet(${parquetSource})
             ${whereClause}
             ${qualifyClause}
         )`;
@@ -104,10 +137,14 @@ export const buildSql = (
             const def = activeDataset.semantic?.measures.find(d => d.name === m);
             let finalSql = m;
 
-            if (def?.non_additive_dimension) {
-                const simpleCol = def.sql.replace(/SUM\((.*)\)/i, '$1');
+            // Use the list we calculated earlier to decide if we apply special logic
+            if (semiAdditiveMeasures.includes(m)) {
+                // It is treated as semi-additive in this query
+                const simpleCol = def?.sql.replace(/SUM\((.*)\)/i, '$1') || m;
                 finalSql = `SUM(CASE WHEN ${m}_flag THEN ${simpleCol} END)`;
             } else if (def) {
+                // Standard aggregation (even if it has non_additive_dimension metadata, 
+                // if it's not in semiAdditiveMeasures list, we treat it as standard)
                 finalSql = def.sql;
             }
 
@@ -160,5 +197,5 @@ export const buildSql = (
     const activeCols = [...selectedColumns, ...selectedDimensions];
     const cols = activeCols.length > 0 ? activeCols.join(', ') : '*';
     const limitClause = ignoreLimit ? '' : `LIMIT ${limit}`;
-    return `SELECT ${cols} FROM read_parquet('${parquetUrl}') ${whereClause} ${limitClause}`;
+    return `SELECT ${cols} FROM read_parquet(${parquetSource}) ${whereClause} ${limitClause}`;
 };

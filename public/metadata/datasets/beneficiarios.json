@@ -2,19 +2,18 @@
     "id": "beneficiarios",
     "name": "Beneficiarios",
     "sources": [
-        "C:\Users\norit\Documents\projetos\duckdb-wasm-spa\public\data\beneficiarios\ben_202201.parquet",
-        "C:\Users\norit\Documents\projetos\duckdb-wasm-spa\public\data\beneficiarios\ben_202202.parquet",
-        "C:\Users\norit\Documents\projetos\duckdb-wasm-spa\public\data\beneficiarios\ben_202203.parquet",
-        "C:\Users\norit\Documents\projetos\duckdb-wasm-spa\public\data\beneficiarios\ben_202204.parquet",
-        "C:\Users\norit\Documents\projetos\duckdb-wasm-spa\public\data\beneficiarios\ben_202205.parquet",
-        "C:\Users\norit\Documents\projetos\duckdb-wasm-spa\public\data\beneficiarios\ben_202206.parquet",
-        "C:\Users\norit\Documents\projetos\duckdb-wasm-spa\public\data\beneficiarios\ben_202207.parquet",
-        "C:\Users\norit\Documents\projetos\duckdb-wasm-spa\public\data\beneficiarios\ben_202208.parquet",
-        "C:\Users\norit\Documents\projetos\duckdb-wasm-spa\public\data\beneficiarios\ben_202209.parquet",
-        "C:\Users\norit\Documents\projetos\duckdb-wasm-spa\public\data\beneficiarios\ben_202210.parquet",
-        "C:\Users\norit\Documents\projetos\duckdb-wasm-spa\public\data\beneficiarios\ben_202211.parquet",
-        "C:\Users\norit\Documents\projetos\duckdb-wasm-spa\public\data\beneficiarios\ben_202212.parquet",
-        "C:\Users\norit\Documents\projetos\duckdb-wasm-spa\public\data\beneficiarios\ben_202301.parquet"
+        "C:\\Users\\norit\\Documents\\projetos\\duckdb-wasm-spa\\public\\data\\beneficiarios\\ben_202201.parquet",
+        "C:\\Users\\norit\\Documents\\projetos\\duckdb-wasm-spa\\public\\data\\beneficiarios\\ben_202202.parquet",
+        "C:\\Users\\norit\\Documents\\projetos\\duckdb-wasm-spa\\public\\data\\beneficiarios\\ben_202203.parquet",
+        "C:\\Users\\norit\\Documents\\projetos\\duckdb-wasm-spa\\public\\data\\beneficiarios\\ben_202204.parquet",
+        "C:\\Users\\norit\\Documents\\projetos\\duckdb-wasm-spa\\public\\data\\beneficiarios\\ben_202205.parquet",
+        "C:\\Users\\norit\\Documents\\projetos\\duckdb-wasm-spa\\public\\data\\beneficiarios\\ben_202206.parquet",
+        "C:\\Users\\norit\\Documents\\projetos\\duckdb-wasm-spa\\public\\data\\beneficiarios\\ben_202207.parquet",
+        "C:\\Users\\norit\\Documents\\projetos\\duckdb-wasm-spa\\public\\data\\beneficiarios\\ben_202208.parquet",
+        "C:\\Users\\norit\\Documents\\projetos\\duckdb-wasm-spa\\public\\data\\beneficiarios\\ben_202209.parquet",
+        "C:\\Users\\norit\\Documents\\projetos\\duckdb-wasm-spa\\public\\data\\beneficiarios\\ben_202210.parquet",
+        "C:\\Users\\norit\\Documents\\projetos\\duckdb-wasm-spa\\public\\data\\beneficiarios\\ben_202211.parquet",
+        "C:\\Users\\norit\\Documents\\projetos\\duckdb-wasm-spa\\public\\data\\beneficiarios\\ben_202212.parquet"
     ],
     "schema": [
         {

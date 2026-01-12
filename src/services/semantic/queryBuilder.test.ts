@@ -98,7 +98,9 @@ describe('buildSql', () => {
         expect(sql).not.toContain("HAVING");
     });
 
-    it('should handle Semi-Additive Logic in Layer 1', () => {
+    it('should apply Semi-Additive Logic (Last Value) when Dim is NOT selected', () => {
+        // Condition: non_additive_dim (dim_date) is NOT selected.
+        // Should use Window function and QUALIFY/CASE logic.
         const state = {
             ...baseState,
             selectedDimensions: ['dim1'],
@@ -108,9 +110,26 @@ describe('buildSql', () => {
 
         // Window function in Layer 1
         expect(sql).toContain("dim_date = FIRST_VALUE(dim_date) OVER");
-
         // Aggregation in Layer 2
-        expect(sql).toContain("SUM(CASE WHEN");
+        expect(sql).toContain("SUM(CASE WHEN semi_add_last_flag THEN col2 END)");
+    });
+
+    it('should fallback to Simple Aggregation when Non-Additive Dim IS selected', () => {
+        // Condition: non_additive_dim (dim_date) IS selected.
+        // Should use standard SUM(col2), no window function, no flag.
+        const state = {
+            ...baseState,
+            selectedDimensions: ['dim1', 'dim_date'], // dim_date is here!
+            selectedMeasures: ['semi_add_last']
+        };
+        const sql = buildSql(mockDataset, state, emptyFilter, []);
+
+        // Should NOT have semi-additive flag logic
+        expect(sql).not.toContain("FIRST_VALUE(dim_date) OVER");
+        expect(sql).not.toContain("semi_add_last_flag");
+
+        // Should have simple aggregation
+        expect(sql).toContain("SUM(col2) AS semi_add_last");
     });
 
     it('should include hidden measures in aggregation (Layer 2) for filtering', () => {
@@ -133,7 +152,6 @@ describe('buildSql', () => {
         expect(sql).toContain("WHERE meas1 > 50");
     });
 
-    // NEW REGRESSION TEST
     it('should generate flag for hidden semi-additive measure used in filter', () => {
         const state = {
             ...baseState,
@@ -146,13 +164,8 @@ describe('buildSql', () => {
 
         const sql = buildSql(mockDataset, state, emptyFilter, measureFilters);
 
-        // 1. Source CTE must generate the flag (currently FAILS)
         expect(sql).toContain("AS semi_add_last_flag");
-
-        // 2. Aggregation must calculate the hidden measure
         expect(sql).toContain("SUM(CASE WHEN semi_add_last_flag THEN col2 END) AS semi_add_last");
-
-        // 3. Final query must filter
         expect(sql).toContain("WHERE semi_add_last > 10");
     });
 
@@ -164,7 +177,19 @@ describe('buildSql', () => {
         };
         const sql = buildSql(mockDataset, state, emptyFilter, []);
 
-        // Layer 2 should have ROUND(...)
         expect(sql).toContain("ROUND(AVG(col2), 2) AS meas_rounded");
+    });
+
+    // NEW TEST CASE
+    it('should generate list syntax for multiple parquet sources', () => {
+        const multiSourceDataset: Dataset = {
+            ...mockDataset,
+            sources: ['file1.parquet', 'file2.parquet']
+        };
+
+        const state = { ...baseState, selectedColumns: ['col1'] };
+        const sql = buildSql(multiSourceDataset, state, emptyFilter, []);
+
+        expect(sql).toContain("read_parquet(['file1.parquet', 'file2.parquet'])");
     });
 });

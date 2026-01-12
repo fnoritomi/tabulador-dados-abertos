@@ -88,6 +88,11 @@
                 "label": "Line Status"
             },
             {
+                "name": "l_shipdate",
+                "type": "DATE",
+                "label": "Ship Date"
+            },
+            {
                 "name": "l_shipmode",
                 "type": "VARCHAR",
                 "label": "Ship Mode"
@@ -113,6 +118,41 @@
                 "name": "total_price",
                 "sql": "SUM(l_extendedprice)",
                 "label": "Total Price"
+            },
+            {
+                "name": "qt_last_ship_date",
+                "sql": "SUM(l_quantity)",
+                "label": "Qtd (Última Ship Date)",
+                "non_additive_dimension": {
+                    "dimension_name": "l_shipdate",
+                    "window_choice": "LAST_VALUE"
+                }
+            },
+            {
+                "name": "qt_last_ship_date_mode",
+                "sql": "SUM(l_quantity)",
+                "label": "Qtd (Última Ship Date por Mode)",
+                "non_additive_dimension": {
+                    "dimension_name": "l_shipdate",
+                    "window_choice": "LAST_VALUE",
+                    "window_groupings": {
+                        "dimensions": [
+                            "l_shipmode"
+                        ]
+                    }
+                }
+            },
+            {
+                "name": "qt_last_ship_date_group",
+                "sql": "SUM(l_quantity)",
+                "label": "Qtd (Última Ship Date no Grupo)",
+                "non_additive_dimension": {
+                    "dimension_name": "l_shipdate",
+                    "window_choice": "LAST_VALUE",
+                    "window_groupings": {
+                        "all_additive_used": true
+                    }
+                }
             }
         ]
     }

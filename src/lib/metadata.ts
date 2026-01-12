@@ -8,12 +8,25 @@ export interface Dimension {
     name: string;
     type: string;
     label?: string;
+    sql?: string;
+}
+
+export type WindowChoice = 'LAST_VALUE' | 'FIRST_VALUE' | 'MAX' | 'MIN';
+
+export interface NonAdditiveDimension {
+    dimension_name: string;
+    window_choice: WindowChoice;
+    window_groupings?: {
+        dimensions?: string[];
+        all_additive_used?: boolean;
+    };
 }
 
 export interface Measure {
     name: string;
     sql: string;
     label?: string;
+    non_additive_dimension?: NonAdditiveDimension;
 }
 
 export interface SemanticLayer {

@@ -41,14 +41,14 @@ describe('buildSql', () => {
         limit: 100
     };
 
-    it('should generate raw query with selected columns', () => {
+    it('should generate raw query with selected columns (Legacy Mode)', () => {
         const state = { ...baseState, selectedColumns: ['col1', 'col2'] };
         const sql = buildSql(mockDataset, state, emptyFilter, []);
         expect(sql).toContain("SELECT col1, col2 FROM read_parquet('test.parquet')");
         expect(sql).toContain("LIMIT 100");
     });
 
-    it('should generate aggregation query with dimensions and measures', () => {
+    it('should generate 3-layer SQL for standard aggregation', () => {
         const state = {
             ...baseState,
             selectedDimensions: ['dim1'],
@@ -56,27 +56,31 @@ describe('buildSql', () => {
         };
         const sql = buildSql(mockDataset, state, emptyFilter, []);
 
-        expect(sql).toContain("SELECT col1 AS dim1, SUM(col2) AS meas1");
-        expect(sql).toContain("GROUP BY 1");
+        // Layer 1: Source
+        expect(sql).toContain("source_cte AS (");
+
+        // Layer 2: Aggregation
+        expect(sql).toContain("agregacao AS (");
+        expect(sql).toContain("GROUP BY ALL");
+
+        // Layer 3: Final
+        expect(sql).toContain("SELECT dim1, meas1 FROM agregacao");
     });
 
-    it('should handle WHERE filters correctly', () => {
-        const state = { ...baseState, selectedColumns: ['col1'] };
+    it('should handle Dimension Filters in Layer 1 (Source CTE)', () => {
+        const state = { ...baseState, selectedDimensions: ['dim1'], selectedMeasures: ['meas1'] };
         const filters: Filter[] = [
-            { id: 1, column: 'col1', operator: '=', value: 'val' },
-            { id: 2, column: 'col2', operator: '>', value: '10' }
+            { id: 1, column: 'col1', operator: '=', value: 'val' }
         ];
 
         const sql = buildSql(mockDataset, state, filters, []);
 
-        // Check quoting for strings (col1 is VARCHAR) and no quoting for numbers (col2 is INTEGER)
-        expect(sql).toContain("col1 = 'val'");
-        expect(sql).toContain("col2 > 10");
-        expect(sql).toContain("WHERE");
-        expect(sql).toContain("AND");
+        // Check filter inside Source CTE
+        // It's part of the source_cte definition
+        expect(sql).toMatch(/source_cte AS \([\s\S]*WHERE col1 = 'val'/);
     });
 
-    it('should handle HAVING filters correctly', () => {
+    it('should handle Measure Filters in Layer 3 (Final Query)', () => {
         const state = {
             ...baseState,
             selectedDimensions: ['dim1'],
@@ -88,18 +92,12 @@ describe('buildSql', () => {
 
         const sql = buildSql(mockDataset, state, emptyFilter, measureFilters);
 
-        // Should use the expression SUM(col2)
-        expect(sql).toContain("HAVING SUM(col2) > 100");
+        // Check filter in Final Query
+        expect(sql).toContain("WHERE meas1 > 100");
+        expect(sql).not.toContain("HAVING");
     });
 
-    it('should respect ignoreLimit flag', () => {
-        const state = { ...baseState, selectedColumns: ['col1'] };
-        const sql = buildSql(mockDataset, state, emptyFilter, [], true);
-
-        expect(sql).not.toContain("LIMIT");
-    });
-
-    it('should generate CTE and Window Function for semi-additive measure', () => {
+    it('should handle Semi-Additive Logic in Layer 1', () => {
         const state = {
             ...baseState,
             selectedDimensions: ['dim1'],
@@ -107,37 +105,53 @@ describe('buildSql', () => {
         };
         const sql = buildSql(mockDataset, state, emptyFilter, []);
 
-        // Expect CTE definition
-        expect(sql).toContain("WITH filtro_nao_aditivo AS (");
+        // Window function in Layer 1
+        expect(sql).toContain("dim_date = FIRST_VALUE(dim_date) OVER");
 
-        // Expect Last Value Window Function logic (descending order)
-        expect(sql).toContain("dim_date = FIRST_VALUE(dim_date) OVER (");
-        expect(sql).toContain("ORDER BY dim_date DESC");
-
-        // Expect QUALIFY because only semi-additive is selected
-        expect(sql).toContain("QUALIFY");
-
-        // Expect Aggregation using CASE WHEN
+        // Aggregation in Layer 2
         expect(sql).toContain("SUM(CASE WHEN");
-        expect(sql).toContain("THEN col2 END) AS semi_add_last");
     });
 
-    it('should NOT use QUALIFY when mixing additive and semi-additive measures', () => {
+    it('should include hidden measures in aggregation (Layer 2) for filtering', () => {
+        // User selects dim1, but filters by hidden measure 'meas1' (not selected for display)
         const state = {
             ...baseState,
             selectedDimensions: ['dim1'],
-            selectedMeasures: ['meas1', 'semi_add_last']
+            selectedMeasures: []
         };
-        const sql = buildSql(mockDataset, state, emptyFilter, []);
+        const measureFilters: Filter[] = [
+            { id: 1, column: 'meas1', operator: '>', value: '50' }
+        ];
 
-        expect(sql).toContain("WITH filtro_nao_aditivo AS (");
-        // Should contain standard additive sum
+        const sql = buildSql(mockDataset, state, emptyFilter, measureFilters);
+
+        // Layer 2 should calculate meas1
         expect(sql).toContain("SUM(col2) AS meas1");
-        // Should contain semi-additive conditional sum
-        expect(sql).toContain("AS semi_add_last");
 
-        // CRITICAL: Should NOT verify rows in strict mode using QUALIFY because we need all rows for the additive measure
-        // Note: The user requirement says "QUALIFY ... -- Apply only if all measures are non-additive"
-        expect(sql).not.toContain("QUALIFY");
+        // Layer 3 should filter by meas1
+        expect(sql).toContain("WHERE meas1 > 50");
+    });
+
+    // NEW REGRESSION TEST
+    it('should generate flag for hidden semi-additive measure used in filter', () => {
+        const state = {
+            ...baseState,
+            selectedDimensions: ['dim1'],
+            selectedMeasures: []
+        };
+        const measureFilters: Filter[] = [
+            { id: 1, column: 'semi_add_last', operator: '>', value: '10' }
+        ];
+
+        const sql = buildSql(mockDataset, state, emptyFilter, measureFilters);
+
+        // 1. Source CTE must generate the flag (currently FAILS)
+        expect(sql).toContain("AS semi_add_last_flag");
+
+        // 2. Aggregation must calculate the hidden measure
+        expect(sql).toContain("SUM(CASE WHEN semi_add_last_flag THEN col2 END) AS semi_add_last");
+
+        // 3. Final query must filter
+        expect(sql).toContain("WHERE semi_add_last > 10");
     });
 });

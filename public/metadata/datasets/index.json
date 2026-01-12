@@ -8,5 +8,10 @@
         "id": "orders",
         "name": "Orders Dataset",
         "path": "/metadata/datasets/orders.json"
+    },
+    {
+        "id": "beneficiarios",
+        "name": "Beneficiários Dataset",
+        "path": "/metadata/datasets/beneficiarios.json"
     }
 ]

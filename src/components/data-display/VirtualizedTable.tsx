@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { TableVirtuoso } from 'react-virtuoso';
-import { Table } from 'apache-arrow';
+import { Table, Type } from 'apache-arrow';
+import { formatValue, DEFAULT_CONFIG } from '../../lib/formatting';
 
 // Using react-virtuoso for virtualization.
 // It renders standard HTML tables, is responsive, and handles sticky headers natively.
@@ -14,12 +15,33 @@ interface VirtualizedTableProps {
     schema: ArrowSchema;
     resultMode: 'raw' | 'semantic';
     getColumnLabel: (colName: string) => string;
+    getColumnOverride?: (colName: string) => { decimals?: number } | undefined;
 }
 
-const VirtualizedTable: React.FC<VirtualizedTableProps> = ({ data, schema, getColumnLabel }) => {
+const VirtualizedTable: React.FC<VirtualizedTableProps> = ({
+    data,
+    schema,
+    getColumnLabel,
+    getColumnOverride
+}) => {
     if (!data || data.length === 0) return <div style={{ padding: '20px' }}>Sem dados para exibir.</div>;
 
-    const columns = schema.fields.map(f => f.name);
+    const columns = useMemo(() => schema.fields.map(f => f.name), [schema]);
+
+    // Pre-calculate column types map
+    const columnTypes = useMemo(() => {
+        const types: Record<string, 'DATE' | 'TIMESTAMP' | 'INTEGER' | 'FLOAT' | 'VARCHAR'> = {};
+        schema.fields.forEach(f => {
+            let type = 'VARCHAR'; // Default
+            if (f.typeId === Type.Date) type = 'DATE';
+            else if (f.typeId === Type.Timestamp) type = 'TIMESTAMP';
+            else if (f.typeId === Type.Int) type = 'INTEGER';
+            else if (f.typeId === Type.Float || f.typeId === Type.Decimal) type = 'FLOAT';
+            // @ts-ignore
+            types[f.name] = type;
+        });
+        return types;
+    }, [schema]);
 
     // Render fixed header
     const fixedHeaderContent = () => {
@@ -48,14 +70,11 @@ const VirtualizedTable: React.FC<VirtualizedTableProps> = ({ data, schema, getCo
             <>
                 {columns.map(col => {
                     const val = row[col];
-                    let displayVal = val;
+                    // @ts-ignore
+                    const colType = columnTypes[col] || 'OTHER';
+                    const override = getColumnOverride ? getColumnOverride(col) : undefined;
 
-                    if (typeof val === 'object' && val !== null) {
-                        if (val instanceof Date) displayVal = val.toLocaleString();
-                        else displayVal = JSON.stringify(val);
-                    } else if (val === null || val === undefined) {
-                        displayVal = <span style={{ color: '#ccc' }}>null</span>;
-                    }
+                    const displayVal = formatValue(val, colType as any, DEFAULT_CONFIG, override);
 
                     return (
                         <td key={col} style={{
@@ -66,7 +85,8 @@ const VirtualizedTable: React.FC<VirtualizedTableProps> = ({ data, schema, getCo
                             maxWidth: '300px',
                             overflow: 'hidden',
                             textOverflow: 'ellipsis',
-                            fontSize: '13px'
+                            fontSize: '13px',
+                            textAlign: (colType === 'INTEGER' || colType === 'FLOAT') ? 'right' : 'left'
                         }}>
                             {displayVal}
                         </td>

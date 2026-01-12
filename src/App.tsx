@@ -10,6 +10,7 @@ import { ExportControls } from './components/controls/ExportControls';
 import { ResultsView } from './components/data-display/ResultsView';
 import type { Filter, QueryState } from './types';
 import { format } from 'sql-formatter';
+import { setConfig, type AppFormattingConfig } from './lib/formatting';
 
 function App() {
   // Hooks
@@ -35,6 +36,17 @@ function App() {
 
   // Helpers
   const isSemanticMode = () => selectedDimensions.length > 0 || selectedMeasures.length > 0;
+
+  // Load Config
+  useEffect(() => {
+    fetch('/metadata/config.json')
+      .then(res => res.json())
+      .then((config: AppFormattingConfig) => {
+        console.log('Loaded config:', config);
+        setConfig(config);
+      })
+      .catch(err => console.warn('Failed to load config, using defaults', err));
+  }, []);
 
   // Reset local state when dataset changes
   useEffect(() => {

@@ -26,6 +26,7 @@ export interface Measure {
     name: string;
     sql: string;
     label?: string;
+    display_decimals?: number;
     non_additive_dimension?: NonAdditiveDimension;
 }
 

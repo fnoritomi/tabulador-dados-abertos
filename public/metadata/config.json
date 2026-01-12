@@ -1,0 +1,20 @@
+{
+    "date": {
+        "order": "YMD",
+        "separator": "-"
+    },
+    "timestamp": {
+        "order": "YMD",
+        "dateSeparator": "-",
+        "timeSeparator": ":",
+        "dateTimeSeparator": " "
+    },
+    "number": {
+        "thousandSeparator": ".",
+        "decimalSeparator": ","
+    },
+    "csv": {
+        "separator": ";",
+        "encoding": "Windows-1252"
+    }
+}

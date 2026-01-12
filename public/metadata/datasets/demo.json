@@ -117,7 +117,8 @@
             {
                 "name": "total_price",
                 "sql": "SUM(l_extendedprice)",
-                "label": "Total Price"
+                "label": "Total Price",
+                "display_decimals": 2
             },
             {
                 "name": "qt_last_ship_date",

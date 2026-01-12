@@ -45,6 +45,14 @@ export const ResultsView: React.FC<ResultsViewProps> = ({ result, resultMode, ac
         return colName;
     };
 
+    const getColumnOverride = (colName: string): { decimals?: number } | undefined => {
+        if (resultMode !== 'semantic') return undefined;
+        if (!activeDataset?.semantic) return undefined;
+        const meas = activeDataset.semantic.measures.find(m => m.name === colName);
+        if (meas?.display_decimals !== undefined) return { decimals: meas.display_decimals };
+        return undefined;
+    };
+
     return (
         <ErrorBoundary>
             <div>
@@ -56,6 +64,7 @@ export const ResultsView: React.FC<ResultsViewProps> = ({ result, resultMode, ac
                     schema={result.schema}
                     resultMode={resultMode}
                     getColumnLabel={getColumnLabel}
+                    getColumnOverride={getColumnOverride}
                 />
             </div>
         </ErrorBoundary>

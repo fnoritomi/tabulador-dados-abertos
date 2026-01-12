@@ -59,12 +59,28 @@ export const ExportControls: React.FC<ExportControlsProps> = ({
             // 4. Transform and Stream Write
             const { arrowBatchToCsv } = await import('../../lib/csvUtils');
 
+            const getColumnOverride = (colName: string) => {
+                if (!activeDataset?.semantic) return undefined;
+                const meas = activeDataset.semantic.measures.find(m => m.name === colName);
+                if (meas?.display_decimals !== undefined) return { decimals: meas.display_decimals };
+                return undefined;
+            };
+
+            const getColumnLabel = (colName: string): string => {
+                if (!activeDataset?.semantic) return colName;
+                const dim = activeDataset.semantic.dimensions.find(d => d.name === colName);
+                if (dim?.label) return dim.label;
+                const meas = activeDataset.semantic.measures.find(m => m.name === colName);
+                if (meas?.label) return meas.label;
+                return colName;
+            };
+
             let isFirstBatch = true;
             // Handle Table vs Iterator
             const batches = (results as any).batches || results;
 
             for await (const batch of batches) {
-                const csvChunk = arrowBatchToCsv(batch, isFirstBatch);
+                const csvChunk = arrowBatchToCsv(batch, isFirstBatch, getColumnOverride, getColumnLabel);
                 await writable.write(csvChunk);
                 isFirstBatch = false;
             }

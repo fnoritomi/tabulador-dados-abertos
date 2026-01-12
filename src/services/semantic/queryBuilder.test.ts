@@ -27,7 +27,8 @@ describe('buildSql', () => {
                         dimension_name: 'dim_date',
                         window_choice: 'LAST_VALUE'
                     }
-                }
+                },
+                { name: 'meas_rounded', sql: 'AVG(col2)', label: 'Meas Rounded', display_decimals: 2 }
             ]
         }
     };
@@ -153,5 +154,17 @@ describe('buildSql', () => {
 
         // 3. Final query must filter
         expect(sql).toContain("WHERE semi_add_last > 10");
+    });
+
+    it('should apply rounding when display_decimals is provided', () => {
+        const state = {
+            ...baseState,
+            selectedDimensions: ['dim1'],
+            selectedMeasures: ['meas_rounded']
+        };
+        const sql = buildSql(mockDataset, state, emptyFilter, []);
+
+        // Layer 2 should have ROUND(...)
+        expect(sql).toContain("ROUND(AVG(col2), 2) AS meas_rounded");
     });
 });

@@ -1,29 +1,60 @@
 
 import { RecordBatch, Type } from 'apache-arrow';
+import { formatValue, DEFAULT_CONFIG } from './formatting';
 
 // Helper to escape CSV fields
-function escapeCsvField(value: any): string {
+function escapeCsvField(value: any, separator: string): string {
     if (value === null || value === undefined) {
         return '';
     }
 
     const stringValue = String(value);
-    if (stringValue.includes(',') || stringValue.includes('"') || stringValue.includes('\n') || stringValue.includes('\r')) {
+    if (stringValue.includes(separator) || stringValue.includes('"') || stringValue.includes('\n') || stringValue.includes('\r')) {
         return `"${stringValue.replace(/"/g, '""')}"`;
     }
     return stringValue;
 }
 
+export type ColumnOverrideFn = (colName: string) => { decimals?: number } | undefined;
+
 // Convert an Arrow RecordBatch to a CSV chunk string
-export function arrowBatchToCsv(batch: RecordBatch, includeHeader: boolean = false): string {
+export function arrowBatchToCsv(
+    batch: RecordBatch,
+    includeHeader: boolean = false,
+    getColumnOverride?: ColumnOverrideFn,
+    getColumnLabel?: (colName: string) => string
+): string {
     let output = '';
     const schema = batch.schema;
     const numRows = batch.numRows;
     const numCols = schema.fields.length;
+    const separator = DEFAULT_CONFIG.csv.separator;
+
+    // Pre-calculate column types map
+    const columnTypes: Record<string, 'DATE' | 'TIMESTAMP' | 'INTEGER' | 'FLOAT' | 'VARCHAR'> = {};
+    schema.fields.forEach(f => {
+        let type = 'VARCHAR'; // Default
+        if (f.typeId === Type.Date) type = 'DATE';
+        else if (f.typeId === Type.Timestamp) type = 'TIMESTAMP';
+        else if (f.typeId === Type.Int) type = 'INTEGER';
+        else if (f.typeId === Type.Float || f.typeId === Type.Decimal) type = 'FLOAT';
+        // @ts-ignore
+        columnTypes[f.name] = type;
+    });
 
     // Header
     if (includeHeader) {
-        output += schema.fields.map(f => escapeCsvField(f.name)).join(',') + '\n';
+        // Handle BOM if encoding says so
+        if (DEFAULT_CONFIG.csv.encoding === 'UTF-8-BOM') {
+            output += '\uFEFF';
+        }
+
+        const headerRow = schema.fields.map(f => {
+            const label = getColumnLabel ? getColumnLabel(f.name) : f.name;
+            return escapeCsvField(label, separator);
+        });
+
+        output += headerRow.join(separator) + '\n';
     }
 
     // Rows
@@ -31,22 +62,16 @@ export function arrowBatchToCsv(batch: RecordBatch, includeHeader: boolean = fal
         const row: string[] = [];
         for (let j = 0; j < numCols; j++) {
             const vec = batch.getChildAt(j);
-            let val = vec?.get(i);
+            const val = vec?.get(i);
+            const colName = schema.fields[j].name;
+            const colType = columnTypes[colName] as any;
 
-            // Handle Dates - Format to ISO 8601
-            // Arrow dates can be numbers (epoch) or Date objects depending on the specific type
-            if (val instanceof Date) {
-                val = val.toISOString();
-            } else if (schema.fields[j].typeId === Type.Date || schema.fields[j].typeId === Type.Timestamp) {
-                // If it comes as number but is a date type
-                if (typeof val === 'number') {
-                    val = new Date(val).toISOString();
-                }
-            }
+            const override = getColumnOverride ? getColumnOverride(colName) : undefined;
+            const formattedVal = formatValue(val, colType, DEFAULT_CONFIG, override);
 
-            row.push(escapeCsvField(val));
+            row.push(escapeCsvField(formattedVal, separator));
         }
-        output += row.join(',') + '\n';
+        output += row.join(separator) + '\n';
     }
 
     return output;

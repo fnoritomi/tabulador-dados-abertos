@@ -1,0 +1,193 @@
+{
+    "id": "beneficiarios",
+    "name": "Beneficiarios",
+    "sources": [
+        "C:\Users\norit\Documents\projetos\duckdb-wasm-spa\public\data\beneficiarios\ben_202201.parquet",
+        "C:\Users\norit\Documents\projetos\duckdb-wasm-spa\public\data\beneficiarios\ben_202202.parquet",
+        "C:\Users\norit\Documents\projetos\duckdb-wasm-spa\public\data\beneficiarios\ben_202203.parquet",
+        "C:\Users\norit\Documents\projetos\duckdb-wasm-spa\public\data\beneficiarios\ben_202204.parquet",
+        "C:\Users\norit\Documents\projetos\duckdb-wasm-spa\public\data\beneficiarios\ben_202205.parquet",
+        "C:\Users\norit\Documents\projetos\duckdb-wasm-spa\public\data\beneficiarios\ben_202206.parquet",
+        "C:\Users\norit\Documents\projetos\duckdb-wasm-spa\public\data\beneficiarios\ben_202207.parquet",
+        "C:\Users\norit\Documents\projetos\duckdb-wasm-spa\public\data\beneficiarios\ben_202208.parquet",
+        "C:\Users\norit\Documents\projetos\duckdb-wasm-spa\public\data\beneficiarios\ben_202209.parquet",
+        "C:\Users\norit\Documents\projetos\duckdb-wasm-spa\public\data\beneficiarios\ben_202210.parquet",
+        "C:\Users\norit\Documents\projetos\duckdb-wasm-spa\public\data\beneficiarios\ben_202211.parquet",
+        "C:\Users\norit\Documents\projetos\duckdb-wasm-spa\public\data\beneficiarios\ben_202212.parquet",
+        "C:\Users\norit\Documents\projetos\duckdb-wasm-spa\public\data\beneficiarios\ben_202301.parquet"
+    ],
+    "schema": [
+        {
+            "name": "COMPETENCIA",
+            "type": "INTEGER"
+        },
+        {
+            "name": "CD_OPERADORA",
+            "type": "VARCHAR"
+        },
+        {
+            "name": "NM_RAZAO_SOCIAL",
+            "type": "VARCHAR"
+        },
+        {
+            "name": "MODALIDADE_OPERADORA",
+            "type": "VARCHAR"
+        },
+        {
+            "name": "SG_UF",
+            "type": "VARCHAR"
+        },
+        {
+            "name": "CD_MUNICIPIO",
+            "type": "VARCHAR"
+        },
+        {
+            "name": "NM_MUNICIPIO",
+            "type": "VARCHAR"
+        },
+        {
+            "name": "TP_SEXO",
+            "type": "VARCHAR"
+        },
+        {
+            "name": "DE_FAIXA_ETARIA",
+            "type": "VARCHAR"
+        },
+        {
+            "name": "DE_FAIXA_ETARIA_REAJ",
+            "type": "VARCHAR"
+        },
+        {
+            "name": "TP_VIGENCIA_PLANO",
+            "type": "VARCHAR"
+        },
+        {
+            "name": "DE_SEGMENTACAO_PLANO",
+            "type": "VARCHAR"
+        },
+        {
+            "name": "DE_ABRG_GEOGRAFICA_PLANO",
+            "type": "VARCHAR"
+        },
+        {
+            "name": "COBERTURA_ASSIST_PLAN",
+            "type": "VARCHAR"
+        },
+        {
+            "name": "TIPO_VINCULO",
+            "type": "VARCHAR"
+        },
+        {
+            "name": "QT_ATIVOS",
+            "type": "INTEGER"
+        },
+        {
+            "name": "QT_ADESOES",
+            "type": "INTEGER"
+        },
+        {
+            "name": "QT_CANCELAMENTOS",
+            "type": "INTEGER"
+        }
+    ],
+    "semantic": {
+        "dimensions": [
+            {
+                "name": "COMPETENCIA",
+                "type": "INTEGER",
+                "label": "Competência"
+            },
+            {
+                "name": "CD_OPERADORA",
+                "type": "VARCHAR",
+                "label": "Código Operadora"
+            },
+            {
+                "name": "NM_RAZAO_SOCIAL",
+                "type": "VARCHAR",
+                "label": "Razão Social"
+            },
+            {
+                "name": "MODALIDADE_OPERADORA",
+                "type": "VARCHAR",
+                "label": "Modalidade Operadora"
+            },
+            {
+                "name": "SG_UF",
+                "type": "VARCHAR",
+                "label": "Estado"
+            },
+            {
+                "name": "CD_MUNICIPIO",
+                "type": "VARCHAR",
+                "label": "Código Município"
+            },
+            {
+                "name": "NM_MUNICIPIO",
+                "type": "VARCHAR",
+                "label": "Município"
+            },
+            {
+                "name": "TP_SEXO",
+                "type": "VARCHAR",
+                "label": "Sexo"
+            },
+            {
+                "name": "DE_FAIXA_ETARIA",
+                "type": "VARCHAR",
+                "label": "Faixa Etária"
+            },
+            {
+                "name": "DE_FAIXA_ETARIA_REAJ",
+                "type": "VARCHAR",
+                "label": "Faixa Etária Reajuste"
+            },
+            {
+                "name": "TP_VIGENCIA_PLANO",
+                "type": "VARCHAR",
+                "label": "Tipo Vigência Plano"
+            },
+            {
+                "name": "DE_SEGMENTACAO_PLANO",
+                "type": "VARCHAR",
+                "label": "Segmentação Assistencial"
+            },
+            {
+                "name": "DE_ABRG_GEOGRAFICA_PLANO",
+                "type": "VARCHAR",
+                "label": "Abrangência Geográfica"
+            },
+            {
+                "name": "COBERTURA_ASSIST_PLAN",
+                "type": "VARCHAR",
+                "label": "Cobertura Assistência"
+            },
+            {
+                "name": "TIPO_VINCULO",
+                "type": "VARCHAR",
+                "label": "Tipo Vínculo"
+            }
+        ],
+        "measures": [
+            {
+                "name": "qt_ativos",
+                "sql": "SUM(QT_ATIVOS)",
+                "label": "Quantidade Ativos",
+                "non_additive_dimension": {
+                    "dimension_name": "COMPETENCIA",
+                    "window_choice": "MAX"
+                }
+            },
+            {
+                "name": "qt_adesoes",
+                "sql": "SUM(QT_ADESOES)",
+                "label": "Quantidade Adesões"
+            },
+            {
+                "name": "qt_cancelamentos",
+                "sql": "SUM(QT_CANCELAMENTOS)",
+                "label": "Quantidade Cancelamentos"
+            }
+        ]
+    }
+}

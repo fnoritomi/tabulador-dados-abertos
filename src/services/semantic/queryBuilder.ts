@@ -102,12 +102,21 @@ export const buildSql = (
 
         const aggMeasures = Array.from(allMeasuresToCalc).map(m => {
             const def = activeDataset.semantic?.measures.find(d => d.name === m);
+            let finalSql = m;
+
             if (def?.non_additive_dimension) {
                 const simpleCol = def.sql.replace(/SUM\((.*)\)/i, '$1');
-                return `SUM(CASE WHEN ${m}_flag THEN ${simpleCol} END) AS ${def.name}`;
-            } else {
-                return def ? `${def.sql} AS ${def.name}` : m;
+                finalSql = `SUM(CASE WHEN ${m}_flag THEN ${simpleCol} END)`;
+            } else if (def) {
+                finalSql = def.sql;
             }
+
+            // Apply rounding if configured
+            if (def?.display_decimals !== undefined) {
+                finalSql = `ROUND(${finalSql}, ${def.display_decimals})`;
+            }
+
+            return `${finalSql} AS ${def?.name || m}`;
         });
 
         // Dimensions to select in aggregation (from `selectedDimensions`)

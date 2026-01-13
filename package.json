@@ -1,5 +1,5 @@
 {
-  "name": "duckdb-wasm-spa",
+  "name": "tabulador-dados-abertos",
   "private": true,
   "version": "0.0.0",
   "type": "module",

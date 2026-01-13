@@ -2,6 +2,7 @@ import { useState, useRef, useCallback } from 'react';
 import * as duckdb from '@duckdb/duckdb-wasm';
 import { FileSystemService } from '../services/io/FileSystemService';
 import { buildSql } from '../services/semantic/queryBuilder';
+import { MetadataService } from '../services/semantic/MetadataService';
 import type { Dataset } from '../lib/metadata';
 import type { QueryState } from '../types';
 
@@ -73,31 +74,10 @@ export function useCsvExport() {
             const { arrowBatchToCsv } = await import('../lib/csvUtils'); // Dynamic import
             const encoder = new TextEncoder();
 
-            // Prepare formatters
-            const getColumnOverride = (colName: string) => {
-                if (!activeDataset?.semantic) return undefined;
-                const meas = activeDataset.semantic.measures.find(m => m.name === colName);
-                if (meas?.display_decimals !== undefined) return { decimals: meas.display_decimals };
-                return undefined;
-            };
-
-            const getColumnLabel = (colName: string): string => {
-                if (!activeDataset?.semantic) return colName;
-                const dim = activeDataset.semantic.dimensions.find(d => d.name === colName);
-                if (dim?.label) return dim.label;
-                const meas = activeDataset.semantic.measures.find(m => m.name === colName);
-                if (meas?.label) return meas.label;
-                return colName;
-            };
-
-            const getColumnType = (colName: string): string | undefined => {
-                if (!activeDataset?.semantic) return undefined;
-                const dim = activeDataset.semantic.dimensions.find(d => d.name === colName);
-                if (dim?.type) return dim.type;
-                const meas = activeDataset.semantic.measures.find(m => m.name === colName);
-                if (meas) return 'FLOAT';
-                return undefined;
-            };
+            // Prepare formatters with MetadataService
+            const getColumnOverride = (colName: string) => MetadataService.getColumnFormat(activeDataset, colName, 'semantic');
+            const getColumnLabel = (colName: string) => MetadataService.getColumnLabel(activeDataset, colName, 'semantic');
+            const getColumnType = (colName: string) => MetadataService.getColumnType(activeDataset, colName, 'semantic');
 
             let isFirstBatch = true;
             onStatus?.("Gerando arquivo CSV...");

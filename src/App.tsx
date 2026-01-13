@@ -2,13 +2,14 @@ import { useEffect, useState, useRef } from 'react';
 import { useDuckDB } from './hooks/useDuckDB';
 import { useDataset } from './hooks/useDataset';
 import { useQueryExecutor } from './hooks/useQueryExecutor';
+import { useAppQueryState } from './hooks/useAppQueryState';
 import { buildSql } from './services/semantic/queryBuilder';
 import { DatasetSelector } from './components/controls/DatasetSelector';
 import { QueryBuilderUI } from './components/controls/QueryBuilderUI';
 import { FilterList } from './components/controls/FilterList';
 import { ExportControls } from './components/controls/ExportControls';
 import { ResultsView } from './components/data-display/ResultsView';
-import type { Filter, QueryState } from './types';
+import type { QueryState } from './types';
 import { format } from 'sql-formatter';
 import { setConfig, type AppFormattingConfig } from './lib/formatting';
 
@@ -24,13 +25,8 @@ function App() {
     loading: queryLoading, cancelling: queryCancelling, error: queryError, resultMode
   } = useQueryExecutor(db);
 
-  // Local State for Query
-  const [selectedColumns, setSelectedColumns] = useState<string[]>([]);
-  const [selectedDimensions, setSelectedDimensions] = useState<string[]>([]);
-  const [selectedMeasures, setSelectedMeasures] = useState<string[]>([]);
-  const [limit, setLimit] = useState<number>(10000);
-  const [filters, setFilters] = useState<Filter[]>([]);
-  const [measureFilters, setMeasureFilters] = useState<Filter[]>([]);
+  // App Query State
+  const { state: qs, actions: qa } = useAppQueryState();
 
   const [generatedSql, setGeneratedSql] = useState<string>('');
 
@@ -47,7 +43,7 @@ function App() {
   const [lastExportMessage, setLastExportMessage] = useState<{ text: string, type: 'success' | 'error' | 'info' } | null>(null);
 
   // Helpers
-  const isSemanticMode = () => selectedDimensions.length > 0 || selectedMeasures.length > 0;
+  const isSemanticMode = () => qs.isSemanticMode;
 
   // Load Config
   useEffect(() => {
@@ -66,11 +62,7 @@ function App() {
     cancelQuery();
 
     // 2. Clear state
-    setSelectedColumns([]);
-    setSelectedDimensions([]);
-    setSelectedMeasures([]);
-    setFilters([]);
-    setMeasureFilters([]);
+    qa.reset();
     setWarmingUpTime(null);
     setStatusMessage(null);
     setIsExporting(false);
@@ -140,42 +132,16 @@ function App() {
   useEffect(() => {
     const queryState: QueryState = {
       selectedDatasetId,
-      selectedColumns,
-      selectedDimensions,
-      selectedMeasures,
-      limit
+      selectedColumns: qs.selectedColumns,
+      selectedDimensions: qs.selectedDimensions,
+      selectedMeasures: qs.selectedMeasures,
+      limit: qs.limit
     };
-    const sql = buildSql(activeDataset, queryState, filters, measureFilters);
+    const sql = buildSql(activeDataset, queryState, qs.filters, qs.measureFilters);
     setGeneratedSql(sql);
-  }, [activeDataset, selectedColumns, selectedDimensions, selectedMeasures, limit, filters, measureFilters, selectedDatasetId]);
+  }, [activeDataset, qs.selectedColumns, qs.selectedDimensions, qs.selectedMeasures, qs.limit, qs.filters, qs.measureFilters, selectedDatasetId]);
 
-  // Handlers
-  const handleToggleColumn = (col: string) => {
-    setSelectedColumns(prev => {
-      const newState = prev.includes(col) ? prev.filter(c => c !== col) : [...prev, col];
-      if (newState.length > 0 && (selectedDimensions.length || selectedMeasures.length)) {
-        setSelectedDimensions([]);
-        setSelectedMeasures([]);
-      }
-      return newState;
-    });
-  };
-
-  const handleToggleDimension = (dim: string) => {
-    setSelectedDimensions(prev => {
-      const newState = prev.includes(dim) ? prev.filter(d => d !== dim) : [...prev, dim];
-      if (newState.length > 0) setSelectedColumns([]);
-      return newState;
-    });
-  };
-
-  const handleToggleMeasure = (meas: string) => {
-    setSelectedMeasures(prev => {
-      const newState = prev.includes(meas) ? prev.filter(m => m !== meas) : [...prev, meas];
-      if (newState.length > 0) setSelectedColumns([]);
-      return newState;
-    });
-  };
+  // Handlers - Simplified by useAppQueryState
 
   // Filter Handlers
   const handleAddFilter = () => {
@@ -185,7 +151,7 @@ function App() {
       : activeDataset.schema[0]?.name;
 
     if (field) {
-      setFilters([...filters, { id: Date.now(), column: field, operator: '=', value: '' }]);
+      qa.addFilter(field, 'dimension');
     }
   };
 
@@ -193,13 +159,10 @@ function App() {
     if (!activeDataset?.semantic) return;
     const field = activeDataset.semantic.measures[0]?.name;
     if (field) {
-      setMeasureFilters([...measureFilters, { id: Date.now(), column: field, operator: '>', value: '' }]);
+      qa.addFilter(field, 'measure');
     }
   };
 
-  const handleUpdateFilter = (list: Filter[], setList: Function, id: number, field: keyof Filter, value: string) => {
-    setList(list.map(f => f.id === id ? { ...f, [field]: value } : f));
-  };
 
   const handleRunQuery = () => {
     setStatusMessage(null);
@@ -274,21 +237,21 @@ function App() {
         <>
           <QueryBuilderUI
             activeDataset={activeDataset}
-            selectedColumns={selectedColumns}
-            selectedDimensions={selectedDimensions}
-            selectedMeasures={selectedMeasures}
-            onToggleColumn={handleToggleColumn}
-            onToggleDimension={handleToggleDimension}
-            onToggleMeasure={handleToggleMeasure}
+            selectedColumns={qs.selectedColumns}
+            selectedDimensions={qs.selectedDimensions}
+            selectedMeasures={qs.selectedMeasures}
+            onToggleColumn={qa.toggleColumn}
+            onToggleDimension={qa.toggleDimension}
+            onToggleMeasure={qa.toggleMeasure}
           />
 
           <FilterList
             title={isSemanticMode() ? 'Filtros de Dimensão (WHERE)' : 'Filtros'}
-            filters={filters}
+            filters={qs.filters}
             options={filterOptions}
             onAdd={handleAddFilter}
-            onRemove={(id) => setFilters(filters.filter(f => f.id !== id))}
-            onUpdate={(id, f, v) => handleUpdateFilter(filters, setFilters, id, f, v)}
+            onRemove={(id) => qa.removeFilter(id, 'dimension')}
+            onUpdate={(id, f, v) => qa.updateFilter(id, f, v, 'dimension')}
             type="dimension"
             color="#b38f00"
             bgColor="#fff9e6"
@@ -297,11 +260,11 @@ function App() {
           {isSemanticMode() && activeDataset.semantic && (
             <FilterList
               title="Filtros de Medida (HAVING)"
-              filters={measureFilters}
+              filters={qs.measureFilters}
               options={measureFilterOptions}
               onAdd={handleAddMeasureFilter}
-              onRemove={(id) => setMeasureFilters(measureFilters.filter(f => f.id !== id))}
-              onUpdate={(id, f, v) => handleUpdateFilter(measureFilters, setMeasureFilters, id, f, v)}
+              onRemove={(id) => qa.removeFilter(id, 'measure')}
+              onUpdate={(id, f, v) => qa.updateFilter(id, f, v, 'measure')}
               type="measure"
               color="#155724"
               bgColor="#d4edda"
@@ -314,8 +277,8 @@ function App() {
               <label style={{ fontWeight: 'bold', marginRight: '5px' }}>Limite:</label>
               <input
                 type="number"
-                value={limit}
-                onChange={(e) => setLimit(Number(e.target.value))}
+                value={qs.limit}
+                onChange={(e) => qa.setLimit(Number(e.target.value))}
                 style={{ padding: '5px', width: '80px' }}
               />
             </div>
@@ -367,9 +330,15 @@ function App() {
             <ExportControls
               db={db}
               activeDataset={activeDataset}
-              queryState={{ selectedDatasetId, selectedColumns, selectedDimensions, selectedMeasures, limit }}
-              filters={filters}
-              measureFilters={measureFilters}
+              queryState={{
+                selectedDatasetId,
+                selectedColumns: qs.selectedColumns,
+                selectedDimensions: qs.selectedDimensions,
+                selectedMeasures: qs.selectedMeasures,
+                limit: qs.limit
+              }}
+              filters={qs.filters}
+              measureFilters={qs.measureFilters}
               disabled={warmingUp || queryLoading || isExporting}
               onExportStart={handleExportStart}
               onExportEnd={handleExportEnd}

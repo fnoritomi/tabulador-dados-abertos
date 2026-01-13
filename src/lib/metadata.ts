@@ -44,7 +44,8 @@ export interface Dataset {
 }
 
 export const fetchDatasetIndex = async (): Promise<DatasetIndexItem[]> => {
-    const response = await fetch('/metadata/datasets/index.json');
+    const baseUrl = import.meta.env.BASE_URL;
+    const response = await fetch(`${baseUrl}metadata/datasets/index.json`);
     if (!response.ok) {
         throw new Error('Failed to fetch dataset index');
     }
@@ -56,11 +57,19 @@ const resolveSourceUrl = (path: string): string => {
         return path;
     }
     const cleanPath = path.startsWith('/') ? path.slice(1) : path;
-    return `${window.location.origin}/data/${cleanPath}`;
+    const baseUrl = import.meta.env.BASE_URL;
+    return `${window.location.origin}${baseUrl}data/${cleanPath}`;
 };
 
 export const fetchDataset = async (path: string): Promise<Dataset> => {
-    const response = await fetch(path);
+    // If path is relative (starts with / or no slash), prepend base url
+    let url = path;
+    if (!path.startsWith('http') && !path.startsWith(import.meta.env.BASE_URL)) {
+        const cleanPath = path.startsWith('/') ? path.slice(1) : path;
+        url = `${import.meta.env.BASE_URL}${cleanPath}`;
+    }
+
+    const response = await fetch(url);
     if (!response.ok) {
         throw new Error(`Failed to fetch dataset metadata from ${path}`);
     }

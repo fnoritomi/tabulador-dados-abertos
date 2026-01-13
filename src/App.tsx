@@ -39,7 +39,7 @@ function App() {
 
   // Load Config
   useEffect(() => {
-    fetch('/metadata/config.json')
+    fetch(`${import.meta.env.BASE_URL}metadata/config.json`)
       .then(res => res.json())
       .then((config: AppFormattingConfig) => {
         console.log('Loaded config:', config);

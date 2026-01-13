@@ -34,6 +34,10 @@ function App() {
 
   const [generatedSql, setGeneratedSql] = useState<string>('');
 
+  // Warm-up State
+  const [warmingUp, setWarmingUp] = useState(false);
+  const [warmingUpTime, setWarmingUpTime] = useState<number | null>(null);
+
   // Helpers
   const isSemanticMode = () => selectedDimensions.length > 0 || selectedMeasures.length > 0;
 
@@ -55,7 +59,44 @@ function App() {
     setSelectedMeasures([]);
     setFilters([]);
     setMeasureFilters([]);
+    setWarmingUpTime(null);
   }, [activeDataset]);
+
+  // Warm-up Effect
+  useEffect(() => {
+    const performWarmup = async () => {
+      if (!db || !activeDataset || !activeDataset.sources || activeDataset.sources.length === 0) return;
+
+      setWarmingUp(true);
+      const start = performance.now();
+
+      try {
+        const conn = await db.connect();
+
+        // Execute count on metadata for each source file to warn up DuckDB cache
+        for (const source of activeDataset.sources) {
+          try {
+            // We use count(*) on parquet_metadata to force reading file footer/metadata without reading all data
+            await conn.query(`SELECT count(*) FROM parquet_metadata('${source}')`);
+          } catch (err) {
+            console.warn(`Failed to warm up source ${source}`, err);
+          }
+        }
+
+        await conn.close();
+        const end = performance.now();
+        setWarmingUpTime(end - start);
+        console.log(`Warm-up completed in ${(end - start).toFixed(2)}ms`);
+      } catch (err) {
+        console.error("Warm-up failed", err);
+      } finally {
+        setWarmingUp(false);
+      }
+    };
+
+    performWarmup();
+  }, [activeDataset, db]);
+
 
   // Update SQL Preview
   useEffect(() => {
@@ -214,18 +255,18 @@ function App() {
           <div style={{ marginBottom: '20px', display: 'flex', gap: '10px', alignItems: 'center' }}>
             <button
               onClick={handleRunQuery}
-              disabled={!db || queryLoading}
+              disabled={!db || queryLoading || warmingUp}
               style={{
                 padding: '10px 20px',
                 fontSize: '16px',
-                cursor: (!db || queryLoading) ? 'not-allowed' : 'pointer',
-                backgroundColor: '#007bff',
-                color: 'white',
+                cursor: (!db || queryLoading || warmingUp) ? 'not-allowed' : 'pointer',
+                backgroundColor: (!db || queryLoading || warmingUp) ? '#e0e0e0' : '#007bff',
+                color: (!db || queryLoading || warmingUp) ? '#888' : 'white',
                 border: 'none',
                 borderRadius: '4px'
               }}
             >
-              {queryLoading ? 'Executando...' : 'Executar consulta'}
+              {queryLoading ? 'Executando...' : warmingUp ? 'Carregando estatísticas...' : 'Executar consulta'}
             </button>
 
             <ExportControls
@@ -234,10 +275,19 @@ function App() {
               queryState={{ selectedDatasetId, selectedColumns, selectedDimensions, selectedMeasures, limit }}
               filters={filters}
               measureFilters={measureFilters}
+              disabled={warmingUp}
             />
 
-            {executionTime && (
+            {executionTime && !warmingUp && (
               <span style={{ color: '#666' }}>Tempo: {executionTime.toFixed(2)}ms</span>
+            )}
+            {warmingUp && (
+              <span style={{ color: '#e67e22', fontWeight: 'bold' }}>
+                Carregando estatísticas dos conjuntos de dados...
+              </span>
+            )}
+            {!warmingUp && warmingUpTime && !executionTime && (
+              <span style={{ color: '#666' }}>Estatísticas carregadas em {warmingUpTime.toFixed(2)}ms</span>
             )}
           </div>
 

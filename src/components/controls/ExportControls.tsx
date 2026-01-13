@@ -10,17 +10,21 @@ interface ExportControlsProps {
     queryState: QueryState;
     filters: any[];
     measureFilters: any[];
+    disabled?: boolean;
 }
 
 export const ExportControls: React.FC<ExportControlsProps> = ({
-    db, activeDataset, queryState, filters, measureFilters
+    db, activeDataset, queryState,
+    filters,
+    measureFilters,
+    disabled = false
 }) => {
-    const [loading, setLoading] = useState(false);
+    const [exporting, setExporting] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
     const handleExportCsv = async () => {
         if (!db || !activeDataset) return;
-        setLoading(true);
+        setExporting(true);
         setError(null);
 
         try {
@@ -43,12 +47,12 @@ export const ExportControls: React.FC<ExportControlsProps> = ({
                 writable = await fileHandle.createWritable();
             } catch (err: any) {
                 if (err.name === 'AbortError') {
-                    setLoading(false);
+                    setExporting(false);
                     return;
                 }
                 console.warn('File System Access API error or unsupported', err);
                 setError("Seu navegador não suporta salvamento direto ou foi cancelado.");
-                setLoading(false);
+                setExporting(false);
                 return;
             }
 
@@ -101,7 +105,7 @@ export const ExportControls: React.FC<ExportControlsProps> = ({
             console.error(err);
             setError('Erro ao exportar: ' + err.message);
         } finally {
-            setLoading(false);
+            setExporting(false);
         }
     };
 
@@ -109,18 +113,18 @@ export const ExportControls: React.FC<ExportControlsProps> = ({
         <>
             <button
                 onClick={handleExportCsv}
-                disabled={!db || loading || !activeDataset}
+                disabled={!db || !activeDataset || exporting || disabled}
                 style={{
                     padding: '10px 20px',
                     fontSize: '16px',
-                    cursor: (!db || loading || !activeDataset) ? 'not-allowed' : 'pointer',
-                    backgroundColor: '#28a745',
-                    color: 'white',
+                    cursor: (!db || !activeDataset || exporting || disabled) ? 'not-allowed' : 'pointer',
+                    backgroundColor: (!db || !activeDataset || exporting || disabled) ? '#e0e0e0' : '#28a745',
+                    color: (!db || !activeDataset || exporting || disabled) ? '#888' : 'white',
                     border: 'none',
                     borderRadius: '4px'
                 }}
             >
-                {loading ? 'Exportando...' : 'Exportar CSV (Stream)'}
+                {exporting ? 'Exportando...' : 'Exportar CSV'}
             </button>
             {error && <div style={{ color: 'red', marginTop: '5px', fontSize: '0.9em' }}>{error}</div>}
         </>

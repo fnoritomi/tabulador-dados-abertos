@@ -112,7 +112,8 @@
             {
                 "name": "avg_price",
                 "sql": "AVG(l_extendedprice)",
-                "label": "Avg Price"
+                "label": "Avg Price",
+                "display_decimals": 2
             },
             {
                 "name": "total_price",

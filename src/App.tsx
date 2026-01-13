@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useDuckDB } from './hooks/useDuckDB';
 import { useDataset } from './hooks/useDataset';
 import { useQueryExecutor } from './hooks/useQueryExecutor';
@@ -20,8 +20,8 @@ function App() {
     activeDataset, loading: datasetLoading, error: datasetError
   } = useDataset();
   const {
-    execute: executeQuery, reset: resetQuery, result, executionTime,
-    loading: queryLoading, error: queryError, resultMode
+    execute: executeQuery, cancel: cancelQuery, reset: resetQuery, result, executionTime,
+    loading: queryLoading, cancelling: queryCancelling, error: queryError, resultMode
   } = useQueryExecutor(db);
 
   // Local State for Query
@@ -37,6 +37,8 @@ function App() {
   // Warm-up State
   const [warmingUp, setWarmingUp] = useState(false);
   const [warmingUpTime, setWarmingUpTime] = useState<number | null>(null);
+  const warmupConnRef = useRef<any>(null);
+  const [statusMessage, setStatusMessage] = useState<string | null>(null);
 
   // Helpers
   const isSemanticMode = () => selectedDimensions.length > 0 || selectedMeasures.length > 0;
@@ -54,12 +56,17 @@ function App() {
 
   // Reset local state when dataset changes
   useEffect(() => {
+    // 1. Cancel running user query
+    cancelQuery();
+
+    // 2. Clear state
     setSelectedColumns([]);
     setSelectedDimensions([]);
     setSelectedMeasures([]);
     setFilters([]);
     setMeasureFilters([]);
     setWarmingUpTime(null);
+    setStatusMessage(null);
     resetQuery();
   }, [activeDataset]);
 
@@ -73,9 +80,13 @@ function App() {
 
       try {
         const conn = await db.connect();
+        warmupConnRef.current = conn;
 
         // Execute count on metadata for each source file to warn up DuckDB cache
         for (const source of activeDataset.sources) {
+          // Check if cancelled (e.g. by cleanup)
+          if (!warmupConnRef.current) break;
+
           try {
             // We use count(*) on parquet_metadata to force reading file footer/metadata without reading all data
             await conn.query(`SELECT count(*) FROM parquet_metadata('${source}')`);
@@ -84,18 +95,35 @@ function App() {
           }
         }
 
-        await conn.close();
-        const end = performance.now();
-        setWarmingUpTime(end - start);
-        console.log(`Warm-up completed in ${(end - start).toFixed(2)}ms`);
+        if (warmupConnRef.current) {
+          await conn.close();
+          // Ref clearing moved to finally
+          const end = performance.now();
+          setWarmingUpTime(end - start);
+          console.log(`Warm-up completed in ${(end - start).toFixed(2)}ms`);
+        }
       } catch (err) {
         console.error("Warm-up failed", err);
       } finally {
-        setWarmingUp(false);
+        if (warmupConnRef.current) { // Only set false if we weren't cancelled (ref still exists)
+          warmupConnRef.current = null;
+          setWarmingUp(false);
+        }
       }
     };
 
     performWarmup();
+
+    return () => {
+      // Cleanup: Cancel warmup if in progress
+      if (warmupConnRef.current) {
+        console.log("Cancelling warm-up due to effect cleanup");
+        warmupConnRef.current.cancelSent().catch(console.warn);
+        warmupConnRef.current.close().catch(console.warn);
+        warmupConnRef.current = null;
+        setWarmingUp(false);
+      }
+    };
   }, [activeDataset, db]);
 
 
@@ -165,9 +193,15 @@ function App() {
   };
 
   const handleRunQuery = () => {
+    setStatusMessage(null);
     if (generatedSql) {
       executeQuery(generatedSql, isSemanticMode() ? 'semantic' : 'raw');
     }
+  };
+
+  const handleCancelQuery = async () => {
+    await cancelQuery();
+    setStatusMessage("Consulta cancelada pelo usuário.");
   };
 
   // Preparation for UI options
@@ -254,21 +288,42 @@ function App() {
 
           {/* Execution Controls */}
           <div style={{ marginBottom: '20px', display: 'flex', gap: '10px', alignItems: 'center' }}>
-            <button
-              onClick={handleRunQuery}
-              disabled={!db || queryLoading || warmingUp}
-              style={{
-                padding: '10px 20px',
-                fontSize: '16px',
-                cursor: (!db || queryLoading || warmingUp) ? 'not-allowed' : 'pointer',
-                backgroundColor: (!db || queryLoading || warmingUp) ? '#e0e0e0' : '#007bff',
-                color: (!db || queryLoading || warmingUp) ? '#888' : 'white',
-                border: 'none',
-                borderRadius: '4px'
-              }}
-            >
-              {queryLoading ? 'Executando...' : warmingUp ? 'Carregando estatísticas...' : 'Executar consulta'}
-            </button>
+            {queryLoading && !warmingUp && (
+              <button
+                onClick={handleCancelQuery}
+                disabled={queryCancelling}
+                style={{
+                  padding: '10px 20px',
+                  fontSize: '16px',
+                  cursor: queryCancelling ? 'not-allowed' : 'pointer',
+                  backgroundColor: '#dc3545',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '4px',
+                  opacity: queryCancelling ? 0.7 : 1
+                }}
+              >
+                Cancelar
+              </button>
+            )}
+
+            {!queryLoading && (
+              <button
+                onClick={handleRunQuery}
+                disabled={!db || warmingUp}
+                style={{
+                  padding: '10px 20px',
+                  fontSize: '16px',
+                  cursor: (!db || warmingUp) ? 'not-allowed' : 'pointer',
+                  backgroundColor: (!db || warmingUp) ? '#e0e0e0' : '#007bff',
+                  color: (!db || warmingUp) ? '#888' : 'white',
+                  border: 'none',
+                  borderRadius: '4px'
+                }}
+              >
+                {warmingUp ? 'Carregando estatísticas...' : 'Executar consulta'}
+              </button>
+            )}
 
             <ExportControls
               db={db}
@@ -276,7 +331,7 @@ function App() {
               queryState={{ selectedDatasetId, selectedColumns, selectedDimensions, selectedMeasures, limit }}
               filters={filters}
               measureFilters={measureFilters}
-              disabled={warmingUp}
+              disabled={warmingUp || queryLoading}
             />
 
             {executionTime ? (
@@ -289,7 +344,17 @@ function App() {
               </span>
             )}
 
-            {!warmingUp && !executionTime && warmingUpTime && (
+            {queryLoading && !warmingUp && (
+              <span style={{ color: '#007bff', fontWeight: 'bold' }}>
+                {queryCancelling ? 'Cancelando consulta...' : 'Executando consulta...'}
+              </span>
+            )}
+
+            {statusMessage && !queryLoading && !warmingUp && (
+              <span style={{ color: '#666' }}>{statusMessage}</span>
+            )}
+
+            {!warmingUp && !executionTime && warmingUpTime && !statusMessage && !queryLoading && (
               <span style={{ color: '#666' }}>Estatísticas carregadas em {warmingUpTime.toFixed(2)}ms</span>
             )}
           </div>

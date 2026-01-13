@@ -1,0 +1,10 @@
+src/hooks/useCsvExport.ts(5,10): error TS1484: 'Dataset' is a type and must be imported using a type-only import when 'verbatimModuleSyntax' is enabled.
+src/hooks/useCsvExport.ts(108,50): error TS2345: Argument of type 'import("C:/Users/norit/Documents/projetos/tabulador-dados-abertos/node_modules/@duckdb/duckdb-wasm/node_modules/apache-arrow/recordbatch").RecordBatch<any>' is not assignable to parameter of type 'import("C:/Users/norit/Documents/projetos/tabulador-dados-abertos/node_modules/apache-arrow/recordbatch").RecordBatch<any>'.
+  The types of 'TType.TArray' are incompatible between these types.
+    Type 'import("C:/Users/norit/Documents/projetos/tabulador-dados-abertos/node_modules/@duckdb/duckdb-wasm/node_modules/apache-arrow/row/struct").StructRowProxy<any>[]' is not assignable to type 'import("C:/Users/norit/Documents/projetos/tabulador-dados-abertos/node_modules/apache-arrow/row/struct").StructRowProxy<any>[]'.
+      Type 'import("C:/Users/norit/Documents/projetos/tabulador-dados-abertos/node_modules/@duckdb/duckdb-wasm/node_modules/apache-arrow/row/struct").StructRowProxy<any>' is not assignable to type 'import("C:/Users/norit/Documents/projetos/tabulador-dados-abertos/node_modules/apache-arrow/row/struct").StructRowProxy<any>'.
+        Type 'StructRow<any> & { [x: string]: any; } & { [key: symbol]: any; }' is missing the following properties from type 'StructRow<any>': [kRowIndex], [kParent]
+src/services/io/FileSystemService.ts(20,49): error TS2339: Property 'showSaveFilePicker' does not exist on type 'Window & typeof globalThis'.
+src/services/io/FileSystemService.ts(43,17): error TS1294: This syntax is not allowed when 'erasableSyntaxOnly' is enabled.
+src/services/io/FileSystemService.ts(66,35): error TS1294: This syntax is not allowed when 'erasableSyntaxOnly' is enabled.
+src/services/io/FileSystemService.ts(66,62): error TS1294: This syntax is not allowed when 'erasableSyntaxOnly' is enabled.

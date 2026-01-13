@@ -81,151 +81,192 @@ export const ExportControls: React.FC<ExportControlsProps> = ({
                 useFallback = true;
             }
 
+
             if (signal.aborted) throw new Error("Cancelado pelo usuário.");
 
-            // 3. Streaming Execution
+            // 3. Streaming Execution with proper memory management
             onExportStatus?.("Executando consulta no banco de dados...");
-            const conn = await db.connect();
-            const results = await conn.send(exportSql);
 
-            if (signal.aborted) {
-                await conn.close();
-                throw new Error("Cancelado pelo usuário.");
-            }
+            // Move conn outside to ensure proper cleanup in finally
+            let conn: any = null;
 
-            // 4. Transform and Stream Write / Fallback Buffer
-            const { arrowBatchToCsv } = await import('../../lib/csvUtils');
+            try {
+                conn = await db.connect();
 
-            const getColumnOverride = (colName: string) => {
-                if (!activeDataset?.semantic) return undefined;
-                const meas = activeDataset.semantic.measures.find(m => m.name === colName);
-                if (meas?.display_decimals !== undefined) return { decimals: meas.display_decimals };
-                return undefined;
-            };
-
-            const getColumnLabel = (colName: string): string => {
-                if (!activeDataset?.semantic) return colName;
-                const dim = activeDataset.semantic.dimensions.find(d => d.name === colName);
-                if (dim?.label) return dim.label;
-                const meas = activeDataset.semantic.measures.find(m => m.name === colName);
-                if (meas?.label) return meas.label;
-                return colName;
-            };
-
-            const getColumnType = (colName: string): string | undefined => {
-                if (!activeDataset?.semantic) return undefined;
-                const dim = activeDataset.semantic.dimensions.find(d => d.name === colName);
-                if (dim?.type) return dim.type;
-                const meas = activeDataset.semantic.measures.find(m => m.name === colName);
-                if (meas) return 'FLOAT'; // Force format for measures
-                return undefined;
-            };
-
-            let isFirstBatch = true;
-            // Handle Table vs Iterator
-            const batches = (results as any).batches || results;
-
-            onExportStatus?.("Gerando arquivo CSV...");
-
-            if (!useFallback && writable) {
-                // Standard Direct Save
-                try {
-                    for await (const batch of batches) {
-                        if (signal.aborted) throw new Error("Cancelado");
-                        const csvChunk = arrowBatchToCsv(batch, isFirstBatch, getColumnOverride, getColumnLabel, getColumnType);
-                        await writable.write(csvChunk);
-                        totalSize += csvChunk.length;
-                        isFirstBatch = false;
-                        onExportStatus?.(`Exportando... ${(totalSize / 1024 / 1024).toFixed(2)} MB`);
-                    }
-                    await writable.close();
-                } catch (e: any) {
-                    if (e.message === "Cancelado") {
-                        // Try to abort writable if possible or just ignore
-                        try { await writable.abort(); } catch (werr) { }
-                        throw new Error("Exportação cancelada pelo usuário");
-                    }
-                    throw e;
+                if (signal.aborted) {
+                    throw new Error("Cancelado pelo usuário.");
                 }
-            } else {
-                // Fallback: Partitioned Memory Download
-                const FALLBACK_SIZE_LIMIT_BYTES = 50 * 1024 * 1024; // 50MB
-                let buffer: string[] = [];
-                let currentBufferSize = 0;
-                let partIndex = 1;
-                const baseFileName = `export_${activeDataset.id}_${Date.now()}`;
 
-                const downloadPart = async (data: string[], partNum: number, isFinal: boolean) => {
-                    const blob = new Blob(data, { type: 'text/csv;charset=utf-8;' });
-                    const url = URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.href = url;
+                // 4. Transform and Stream Write / Fallback Buffer
+                const { arrowBatchToCsv } = await import('../../lib/csvUtils');
 
-                    // If it's a single file (part 1 and final), normal name. Else suffixed.
-                    const fileName = (partNum === 1 && isFinal)
-                        ? `${baseFileName}.csv`
-                        : `${baseFileName}_part${partNum}.csv`;
+                // Create TextEncoder for string -> bytes conversion
+                const encoder = new TextEncoder();
 
-                    a.download = fileName;
-                    document.body.appendChild(a);
-                    a.click();
-                    document.body.removeChild(a);
-
-                    // Allow UI/Download to process
-                    await new Promise(resolve => setTimeout(resolve, 500));
-                    URL.revokeObjectURL(url);
+                const getColumnOverride = (colName: string) => {
+                    if (!activeDataset?.semantic) return undefined;
+                    const meas = activeDataset.semantic.measures.find(m => m.name === colName);
+                    if (meas?.display_decimals !== undefined) return { decimals: meas.display_decimals };
+                    return undefined;
                 };
 
-                for await (const batch of batches) {
-                    if (signal.aborted) throw new Error("Exportação cancelada pelo usuário");
+                const getColumnLabel = (colName: string): string => {
+                    if (!activeDataset?.semantic) return colName;
+                    const dim = activeDataset.semantic.dimensions.find(d => d.name === colName);
+                    if (dim?.label) return dim.label;
+                    const meas = activeDataset.semantic.measures.find(m => m.name === colName);
+                    if (meas?.label) return meas.label;
+                    return colName;
+                };
 
-                    const csvChunk = arrowBatchToCsv(batch, isFirstBatch, getColumnOverride, getColumnLabel, getColumnType);
-                    buffer.push(csvChunk);
-                    currentBufferSize += csvChunk.length;
-                    totalSize += csvChunk.length;
+                const getColumnType = (colName: string): string | undefined => {
+                    if (!activeDataset?.semantic) return undefined;
+                    const dim = activeDataset.semantic.dimensions.find(d => d.name === colName);
+                    if (dim?.type) return dim.type;
+                    const meas = activeDataset.semantic.measures.find(m => m.name === colName);
+                    if (meas) return 'FLOAT'; // Force format for measures
+                    return undefined;
+                };
 
-                    onExportStatus?.(`Exportando... ${(totalSize / 1024 / 1024).toFixed(2)} MB`);
+                let isFirstBatch = true;
 
-                    if (currentBufferSize >= FALLBACK_SIZE_LIMIT_BYTES) {
-                        onExportStatus?.(`Baixando parte ${partIndex}...`);
-                        // Download current part
-                        await downloadPart(buffer, partIndex, false);
+                onExportStatus?.("Gerando arquivo CSV...");
 
-                        // Clear memory immediately
-                        buffer = [];
-                        currentBufferSize = 0;
-                        partIndex++;
-                        isFirstBatch = true;
-                    } else {
-                        isFirstBatch = false;
+                if (!useFallback && writable) {
+                    // Standard Direct Save with bytes
+                    try {
+                        // CRITICAL: Use allowStreamResult=true for proper streaming
+                        const reader = await conn.send(exportSql, true);
+
+                        for await (const batch of reader) {
+                            if (signal.aborted) throw new Error("Cancelado");
+
+                            const csvChunk = arrowBatchToCsv(batch, isFirstBatch, getColumnOverride, getColumnLabel, getColumnType);
+
+                            // Write as bytes, not string
+                            const bytes = encoder.encode(csvChunk);
+                            await writable.write(bytes);
+
+                            totalSize += bytes.byteLength; // Use byteLength, not string length
+                            isFirstBatch = false;
+                            onExportStatus?.(`Exportando... ${(totalSize / 1024 / 1024).toFixed(2)} MB`);
+
+                            // Yield to GC
+                            await new Promise(r => setTimeout(r, 0));
+                        }
+                        await writable.close();
+                    } catch (e: any) {
+                        if (e.message === "Cancelado") {
+                            try { await writable.abort(); } catch (werr) { }
+                            throw new Error("Exportação cancelada pelo usuário");
+                        }
+                        throw e;
+                    }
+                } else {
+                    // Fallback: Partitioned Memory Download with bytes
+                    // Increased limit to 100MB per user request
+                    const FALLBACK_SIZE_LIMIT_BYTES = 100 * 1024 * 1024;
+                    let buffer: Uint8Array[] = []; // Store bytes, not strings
+                    let currentBufferSize = 0;
+                    let partIndex = 1;
+                    const baseFileName = `export_${activeDataset.id}_${Date.now()}`;
+
+                    const downloadPart = async (data: Uint8Array[], partNum: number, isFinal: boolean) => {
+                        const blob = new Blob(data as any, { type: 'text/csv;charset=utf-8;' });
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+
+                        const fileName = (partNum === 1 && isFinal)
+                            ? `${baseFileName}.csv`
+                            : `${baseFileName}_part${partNum}.csv`;
+
+                        a.download = fileName;
+                        document.body.appendChild(a);
+                        a.click();
+                        document.body.removeChild(a);
+
+                        await new Promise(resolve => setTimeout(resolve, 500));
+                        URL.revokeObjectURL(url);
+                    };
+
+                    // CRITICAL: Use allowStreamResult=true
+                    const reader = await conn.send(exportSql, true);
+
+                    for await (const batch of reader) {
+                        if (signal.aborted) throw new Error("Exportação cancelada pelo usuário");
+
+                        const csvChunk = arrowBatchToCsv(batch, isFirstBatch, getColumnOverride, getColumnLabel, getColumnType);
+
+                        // Convert to bytes immediately
+                        const bytes = encoder.encode(csvChunk);
+                        buffer.push(bytes);
+                        currentBufferSize += bytes.byteLength;
+                        totalSize += bytes.byteLength;
+
+                        onExportStatus?.(`Exportando... ${(totalSize / 1024 / 1024).toFixed(2)} MB`);
+
+                        if (currentBufferSize >= FALLBACK_SIZE_LIMIT_BYTES) {
+                            onExportStatus?.(`Baixando parte ${partIndex}...`);
+                            await downloadPart(buffer, partIndex, false);
+
+                            // Clear memory immediately
+                            buffer = [];
+                            currentBufferSize = 0;
+                            partIndex++;
+                            isFirstBatch = true;
+                        } else {
+                            isFirstBatch = false;
+                        }
+
+                        // Yield to GC
+                        await new Promise(r => setTimeout(r, 0));
+                    }
+
+                    // Download remaining part
+                    if (buffer.length > 0) {
+                        if (signal.aborted) throw new Error("Exportação cancelada pelo usuário");
+                        onExportStatus?.(`Baixando parte final...`);
+                        await downloadPart(buffer, partIndex, true);
                     }
                 }
 
-                // Download remaining part
-                if (buffer.length > 0) {
-                    if (signal.aborted) throw new Error("Exportação cancelada pelo usuário");
-                    onExportStatus?.(`Baixando parte final...`);
-                    await downloadPart(buffer, partIndex, true);
+                const endTime = performance.now();
+                const duration = (endTime - startTime) / 1000;
+                const sizeMB = totalSize / 1024 / 1024;
+
+                onExportEnd?.({
+                    success: true,
+                    details: { time: duration, sizeMB: sizeMB }
+                });
+
+            } catch (err: any) {
+                console.error(err);
+                const msg = err.message || "";
+                // Normalize error messages
+                if (msg.includes("Cancelado") || msg.includes("The user aborted a request") || msg.includes("AbortError")) {
+                    onExportEnd?.({ success: false, message: "Exportação cancelada pelo usuário." });
+                } else {
+                    onExportEnd?.({ success: false, message: 'Erro: ' + msg });
                 }
+            } finally {
+                // Always close connection
+                try {
+                    await conn?.close();
+                } catch (closeErr) {
+                    console.warn("Error closing connection:", closeErr);
+                }
+                setExporting(false);
+                setCancelling(false);
+                abortControllerRef.current = null;
             }
-
-            await conn.close();
-
-            const endTime = performance.now();
-            const duration = (endTime - startTime) / 1000;
-            const sizeMB = totalSize / 1024 / 1024;
-
-            onExportEnd?.({
-                success: true,
-                details: { time: duration, sizeMB: sizeMB }
-            });
 
         } catch (err: any) {
             console.error(err);
             const msg = err.message || "";
             // Normalize error messages
             if (msg.includes("Cancelado") || msg.includes("The user aborted a request") || msg.includes("AbortError")) {
-                onExportEnd?.({ success: false, message: "Exportação cancelada pelo usuário." }); // Normalized cancel message
+                onExportEnd?.({ success: false, message: "Exportação cancelada pelo usuário." });
             } else {
                 onExportEnd?.({ success: false, message: 'Erro: ' + msg });
             }
@@ -249,8 +290,6 @@ export const ExportControls: React.FC<ExportControlsProps> = ({
             {!exporting ? (
                 <button
                     onClick={handleExportCsv}
-                    // Only disable if explicitly disabled passed from parent (e.g. during query exec)
-                    // AND not currently exporting (which is handled by swapping button)
                     disabled={disabled && !exporting}
                     style={{
                         padding: '10px 20px',
@@ -282,7 +321,6 @@ export const ExportControls: React.FC<ExportControlsProps> = ({
                     Cancelar exportação
                 </button>
             )}
-            {/* NO ERROR RENDERED HERE - DELEGATED TO PARENT */}
         </>
     );
 };

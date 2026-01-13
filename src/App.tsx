@@ -20,7 +20,7 @@ function App() {
     activeDataset, loading: datasetLoading, error: datasetError
   } = useDataset();
   const {
-    execute: executeQuery, result, executionTime,
+    execute: executeQuery, reset: resetQuery, result, executionTime,
     loading: queryLoading, error: queryError, resultMode
   } = useQueryExecutor(db);
 
@@ -60,6 +60,7 @@ function App() {
     setFilters([]);
     setMeasureFilters([]);
     setWarmingUpTime(null);
+    resetQuery();
   }, [activeDataset]);
 
   // Warm-up Effect
@@ -278,15 +279,17 @@ function App() {
               disabled={warmingUp}
             />
 
-            {executionTime && !warmingUp && (
+            {executionTime ? (
               <span style={{ color: '#666' }}>Tempo: {executionTime.toFixed(2)}ms</span>
-            )}
+            ) : null}
+
             {warmingUp && (
               <span style={{ color: '#e67e22', fontWeight: 'bold' }}>
                 Carregando estatísticas dos conjuntos de dados...
               </span>
             )}
-            {!warmingUp && warmingUpTime && !executionTime && (
+
+            {!warmingUp && !executionTime && warmingUpTime && (
               <span style={{ color: '#666' }}>Estatísticas carregadas em {warmingUpTime.toFixed(2)}ms</span>
             )}
           </div>

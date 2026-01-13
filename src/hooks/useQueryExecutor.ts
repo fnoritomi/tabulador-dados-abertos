@@ -34,5 +34,12 @@ export const useQueryExecutor = (db: duckdb.AsyncDuckDB | null) => {
         }
     };
 
-    return { execute, result, executionTime, loading, error, resultMode };
+    const reset = () => {
+        setResult(null);
+        setExecutionTime(null);
+        setError(null);
+        setLoading(false);
+    };
+
+    return { execute, reset, result, executionTime, loading, error, resultMode };
 };

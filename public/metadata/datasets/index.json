@@ -11,7 +11,7 @@
     },
     {
         "id": "beneficiarios",
-        "name": "Beneficiários Dataset",
+        "name": "Beneficiários",
         "path": "/metadata/datasets/beneficiarios.json"
     }
 ]

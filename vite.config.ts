@@ -9,4 +9,5 @@ export default defineConfig({
     environment: 'jsdom',
     globals: true,
   },
+  base: '/tabulador-dados-abertos/'
 } as any)

@@ -3,17 +3,17 @@
     "name": "Beneficiarios",
     "sources": [
         "beneficiarios/ben_202201.parquet",
-        "C:\\Users\\norit\\Documents\\projetos\\tabulador-dados-abertos\\public\\data\\beneficiarios\\ben_202202.parquet",
-        "C:\\Users\\norit\\Documents\\projetos\\tabulador-dados-abertos\\public\\data\\beneficiarios\\ben_202203.parquet",
-        "C:\\Users\\norit\\Documents\\projetos\\tabulador-dados-abertos\\public\\data\\beneficiarios\\ben_202204.parquet",
-        "C:\\Users\\norit\\Documents\\projetos\\tabulador-dados-abertos\\public\\data\\beneficiarios\\ben_202205.parquet",
-        "C:\\Users\\norit\\Documents\\projetos\\tabulador-dados-abertos\\public\\data\\beneficiarios\\ben_202206.parquet",
-        "C:\\Users\\norit\\Documents\\projetos\\tabulador-dados-abertos\\public\\data\\beneficiarios\\ben_202207.parquet",
-        "C:\\Users\\norit\\Documents\\projetos\\tabulador-dados-abertos\\public\\data\\beneficiarios\\ben_202208.parquet",
-        "C:\\Users\\norit\\Documents\\projetos\\tabulador-dados-abertos\\public\\data\\beneficiarios\\ben_202209.parquet",
-        "C:\\Users\\norit\\Documents\\projetos\\tabulador-dados-abertos\\public\\data\\beneficiarios\\ben_202210.parquet",
-        "C:\\Users\\norit\\Documents\\projetos\\tabulador-dados-abertos\\public\\data\\beneficiarios\\ben_202211.parquet",
-        "C:\\Users\\norit\\Documents\\projetos\\tabulador-dados-abertos\\public\\data\\beneficiarios\\ben_202212.parquet"
+        "beneficiarios/ben_202202.parquet",
+        "beneficiarios/ben_202203.parquet",
+        "beneficiarios/ben_202204.parquet",
+        "beneficiarios/ben_202205.parquet",
+        "beneficiarios/ben_202206.parquet",
+        "beneficiarios/ben_202207.parquet",
+        "beneficiarios/ben_202208.parquet",
+        "beneficiarios/ben_202209.parquet",
+        "beneficiarios/ben_202210.parquet",
+        "beneficiarios/ben_202211.parquet",
+        "beneficiarios/ben_202212.parquet"
     ],
     "schema": [
         {

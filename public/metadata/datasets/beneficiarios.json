@@ -2,7 +2,7 @@
     "id": "beneficiarios",
     "name": "Beneficiarios",
     "sources": [
-        "C:\\Users\\norit\\Documents\\projetos\\tabulador-dados-abertos\\public\\data\\beneficiarios\\ben_202201.parquet",
+        "beneficiarios/ben_202201.parquet",
         "C:\\Users\\norit\\Documents\\projetos\\tabulador-dados-abertos\\public\\data\\beneficiarios\\ben_202202.parquet",
         "C:\\Users\\norit\\Documents\\projetos\\tabulador-dados-abertos\\public\\data\\beneficiarios\\ben_202203.parquet",
         "C:\\Users\\norit\\Documents\\projetos\\tabulador-dados-abertos\\public\\data\\beneficiarios\\ben_202204.parquet",

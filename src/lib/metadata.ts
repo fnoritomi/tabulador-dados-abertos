@@ -51,10 +51,22 @@ export const fetchDatasetIndex = async (): Promise<DatasetIndexItem[]> => {
     return response.json();
 };
 
+const resolveSourceUrl = (path: string): string => {
+    if (path.startsWith('http://') || path.startsWith('https://')) {
+        return path;
+    }
+    const cleanPath = path.startsWith('/') ? path.slice(1) : path;
+    return `${window.location.origin}/data/${cleanPath}`;
+};
+
 export const fetchDataset = async (path: string): Promise<Dataset> => {
     const response = await fetch(path);
     if (!response.ok) {
         throw new Error(`Failed to fetch dataset metadata from ${path}`);
     }
-    return response.json();
+    const dataset = await response.json();
+    return {
+        ...dataset,
+        sources: dataset.sources.map(resolveSourceUrl)
+    };
 };

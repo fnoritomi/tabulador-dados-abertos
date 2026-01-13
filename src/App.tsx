@@ -40,6 +40,12 @@ function App() {
   const warmupConnRef = useRef<any>(null);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
 
+  // Export State
+  const [isExporting, setIsExporting] = useState(false);
+  const [exportStatusMessage, setExportStatusMessage] = useState<string | null>(null);
+  // lastExportResult now holds both SUCCESS and ERROR/CANCEL messages from export
+  const [lastExportMessage, setLastExportMessage] = useState<{ text: string, type: 'success' | 'error' | 'info' } | null>(null);
+
   // Helpers
   const isSemanticMode = () => selectedDimensions.length > 0 || selectedMeasures.length > 0;
 
@@ -67,6 +73,9 @@ function App() {
     setMeasureFilters([]);
     setWarmingUpTime(null);
     setStatusMessage(null);
+    setIsExporting(false);
+    setExportStatusMessage(null);
+    setLastExportMessage(null);
     resetQuery();
   }, [activeDataset]);
 
@@ -194,6 +203,7 @@ function App() {
 
   const handleRunQuery = () => {
     setStatusMessage(null);
+    setLastExportMessage(null);
     if (generatedSql) {
       executeQuery(generatedSql, isSemanticMode() ? 'semantic' : 'raw');
     }
@@ -203,6 +213,35 @@ function App() {
     await cancelQuery();
     setStatusMessage("Consulta cancelada pelo usuário.");
   };
+
+  // Export Handlers
+  const handleExportStart = () => {
+    setIsExporting(true);
+    setExportStatusMessage("Exportando resultado para arquivo CSV...");
+    setStatusMessage(null);
+    setLastExportMessage(null);
+  };
+
+  const handleExportEnd = (result: { success: boolean; message?: string; details?: { time: number; sizeMB: number } }) => {
+    setIsExporting(false);
+    setExportStatusMessage(null);
+
+    if (result.success && result.details) {
+      setLastExportMessage({
+        text: `Exportação concluída. Tempo: ${result.details.time.toFixed(1)} segundos. Tamanho: ${result.details.sizeMB.toFixed(2)} MB.`,
+        type: 'success'
+      });
+    } else {
+      setLastExportMessage({
+        text: result.message || "Exportação falhou.",
+        type: 'error'
+      });
+    }
+  };
+
+  const handleExportStatus = (msg: string) => {
+    setExportStatusMessage(msg);
+  }
 
   // Preparation for UI options
   const filterOptions = activeDataset ? (
@@ -310,13 +349,13 @@ function App() {
             {!queryLoading && (
               <button
                 onClick={handleRunQuery}
-                disabled={!db || warmingUp}
+                disabled={!db || warmingUp || isExporting}
                 style={{
                   padding: '10px 20px',
                   fontSize: '16px',
-                  cursor: (!db || warmingUp) ? 'not-allowed' : 'pointer',
-                  backgroundColor: (!db || warmingUp) ? '#e0e0e0' : '#007bff',
-                  color: (!db || warmingUp) ? '#888' : 'white',
+                  cursor: (!db || warmingUp || isExporting) ? 'not-allowed' : 'pointer',
+                  backgroundColor: (!db || warmingUp || isExporting) ? '#e0e0e0' : '#007bff',
+                  color: (!db || warmingUp || isExporting) ? '#888' : 'white',
                   border: 'none',
                   borderRadius: '4px'
                 }}
@@ -331,32 +370,46 @@ function App() {
               queryState={{ selectedDatasetId, selectedColumns, selectedDimensions, selectedMeasures, limit }}
               filters={filters}
               measureFilters={measureFilters}
-              disabled={warmingUp || queryLoading}
+              disabled={warmingUp || queryLoading || isExporting}
+              onExportStart={handleExportStart}
+              onExportEnd={handleExportEnd}
+              onExportStatus={handleExportStatus}
             />
 
-            {executionTime ? (
-              <span style={{ color: '#666' }}>Tempo: {executionTime.toFixed(2)}ms</span>
-            ) : null}
-
-            {warmingUp && (
-              <span style={{ color: '#e67e22', fontWeight: 'bold' }}>
-                Carregando estatísticas dos conjuntos de dados...
-              </span>
-            )}
-
-            {queryLoading && !warmingUp && (
-              <span style={{ color: '#007bff', fontWeight: 'bold' }}>
-                {queryCancelling ? 'Cancelando consulta...' : 'Executando consulta...'}
-              </span>
-            )}
-
-            {statusMessage && !queryLoading && !warmingUp && (
-              <span style={{ color: '#666' }}>{statusMessage}</span>
-            )}
-
-            {!warmingUp && !executionTime && warmingUpTime && !statusMessage && !queryLoading && (
-              <span style={{ color: '#666' }}>Estatísticas carregadas em {warmingUpTime.toFixed(2)}ms</span>
-            )}
+            {/* UNIFIED STATUS DISPLAY */}
+            {(() => {
+              if (warmingUp) {
+                return <span style={{ color: '#e67e22', fontWeight: 'bold' }}>Carregando estatísticas dos conjuntos de dados...</span>;
+              }
+              if (queryLoading) {
+                return <span style={{ color: '#007bff', fontWeight: 'bold' }}>{queryCancelling ? 'Cancelando consulta...' : 'Executando consulta...'}</span>;
+              }
+              // Exporting status takes precedence over old results
+              if (isExporting) {
+                return <span style={{ color: '#28a745', fontWeight: 'bold' }}>{exportStatusMessage || "Exportando..."}</span>;
+              }
+              // Last Export Result (Success or Error/Cancelled) gets high priority visibility after export ends
+              if (lastExportMessage) {
+                return (
+                  <span style={{ color: lastExportMessage.type === 'error' ? 'red' : ((lastExportMessage.type === 'success') ? '#666' : '#007bff') }}>
+                    {lastExportMessage.text}
+                  </span>
+                );
+              }
+              // Query Status/Cancellation
+              if (statusMessage) {
+                return <span style={{ color: '#666' }}>{statusMessage}</span>;
+              }
+              // Query Time (only if no export msg)
+              if (executionTime) {
+                return <span style={{ color: '#666' }}>Tempo: {executionTime.toFixed(2)}ms</span>;
+              }
+              // Warmup Time (lowest priority)
+              if (warmingUpTime) {
+                return <span style={{ color: '#666' }}>Estatísticas carregadas em {warmingUpTime.toFixed(2)}ms</span>;
+              }
+              return null;
+            })()}
           </div>
 
           {queryError && (

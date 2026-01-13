@@ -18,7 +18,7 @@
     "schema": [
         {
             "name": "COMPETENCIA",
-            "type": "INTEGER"
+            "type": "VARCHAR"
         },
         {
             "name": "CD_OPERADORA",
@@ -97,7 +97,7 @@
         "dimensions": [
             {
                 "name": "COMPETENCIA",
-                "type": "INTEGER",
+                "type": "VARCHAR",
                 "label": "Competência"
             },
             {

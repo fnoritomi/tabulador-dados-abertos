@@ -22,7 +22,8 @@ export function arrowBatchToCsv(
     batch: RecordBatch,
     includeHeader: boolean = false,
     getColumnOverride?: ColumnOverrideFn,
-    getColumnLabel?: (colName: string) => string
+    getColumnLabel?: (colName: string) => string,
+    getColumnType?: (colName: string) => string | undefined
 ): string {
     let output = '';
     const schema = batch.schema;
@@ -33,13 +34,24 @@ export function arrowBatchToCsv(
     // Pre-calculate column types map
     const columnTypes: Record<string, 'DATE' | 'TIMESTAMP' | 'INTEGER' | 'FLOAT' | 'VARCHAR'> = {};
     schema.fields.forEach(f => {
-        let type = 'VARCHAR'; // Default
-        if (f.typeId === Type.Date) type = 'DATE';
-        else if (f.typeId === Type.Timestamp) type = 'TIMESTAMP';
-        else if (f.typeId === Type.Int) type = 'INTEGER';
-        else if (f.typeId === Type.Float || f.typeId === Type.Decimal) type = 'FLOAT';
-        // @ts-ignore
-        columnTypes[f.name] = type;
+        // Priority: Metadata > Schema
+        const metaType = getColumnType ? getColumnType(f.name) : undefined;
+        if (metaType) {
+            // Map metadata types to formatting types
+            if (metaType === 'INTEGER' || metaType === 'BIGINT') columnTypes[f.name] = 'INTEGER';
+            else if (metaType === 'FLOAT' || metaType === 'DOUBLE' || metaType === 'DECIMAL' || metaType === 'REAL') columnTypes[f.name] = 'FLOAT';
+            else if (metaType === 'DATE') columnTypes[f.name] = 'DATE';
+            else if (metaType === 'TIMESTAMP') columnTypes[f.name] = 'TIMESTAMP';
+            else columnTypes[f.name] = 'VARCHAR';
+        } else {
+            let type = 'VARCHAR'; // Default
+            if (f.typeId === Type.Date) type = 'DATE';
+            else if (f.typeId === Type.Timestamp) type = 'TIMESTAMP';
+            else if (f.typeId === Type.Int) type = 'INTEGER';
+            else if (f.typeId === Type.Float || f.typeId === Type.Decimal) type = 'FLOAT';
+            // @ts-ignore
+            columnTypes[f.name] = type;
+        }
     });
 
     // Header

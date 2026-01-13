@@ -122,4 +122,46 @@ describe('arrowBatchToCsv', () => {
         expect(lines[0].trim()).toBe('Friendly Name');
         expect(lines[1].trim()).toBe('foo');
     });
+
+    it('should respect getColumnType over Arrow schema', () => {
+        // Arrow says UTF8 (VARCHAR), but we say INTEGER via metadata
+        // Data is "1234", so if treated as INTEGER it might be formatted "1.234" depending on locale/config
+        // BUT formatInteger takes a number. "1234" string might need casting or fail.
+        // formatValue converts using Number(value).
+
+        const data = [
+            ["1234"]
+        ];
+        const fields = [
+            { name: 'mixed_col', typeId: Type.Utf8 }
+        ];
+        const batch = createMockBatch(data, fields);
+
+        const getColumnType = (col: string) => col === 'mixed_col' ? 'INTEGER' : undefined;
+
+        // Default Config: thousand='.' 
+        // 1234 -> 1.234
+        const csv = arrowBatchToCsv(batch, false, undefined, undefined, getColumnType);
+
+        expect(csv.trim()).toBe('1.234');
+    });
+
+    it('should NOT format if getColumnType says VARCHAR even if Arrow says Int', () => {
+        // Arrow says Int (INTEGER), but we say VARCHAR via metadata
+        // Data is 1234. If formatted: 1.234. If VARCHAR: 1234.
+
+        const data = [
+            [1234]
+        ];
+        const fields = [
+            { name: 'id_col', typeId: Type.Int }
+        ];
+        const batch = createMockBatch(data, fields);
+
+        const getColumnType = (col: string) => col === 'id_col' ? 'VARCHAR' : undefined;
+
+        const csv = arrowBatchToCsv(batch, false, undefined, undefined, getColumnType);
+
+        expect(csv.trim()).toBe('1234');
+    });
 });

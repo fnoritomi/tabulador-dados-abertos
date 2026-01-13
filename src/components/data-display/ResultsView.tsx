@@ -53,6 +53,29 @@ export const ResultsView: React.FC<ResultsViewProps> = ({ result, resultMode, ac
         return undefined;
     };
 
+    const getColumnType = (colName: string): string | undefined => {
+        if (resultMode !== 'semantic') return undefined;
+        if (!activeDataset?.semantic) return undefined;
+        const dim = activeDataset.semantic.dimensions.find(d => d.name === colName);
+        if (dim?.type) return dim.type;
+        const meas = activeDataset.semantic.measures.find(m => m.name === colName);
+        // Measures are typically numeric, but let's see if we can infer or if we should add type to measure def
+        // For now, assume measures are FLOAT if not specified, or fallback to schema
+        // Actually, for measures, we usually want formatting. 
+        // Let's return undefined for now and let schema handle if it's numeric, 
+        // OR better: if it's a measure, we WANT it formatted.
+        // But the requirement is: "If numeric type in metadata -> format. If VARCHAR -> no format".
+        // Measures don't usually have 'type' in metadata currently (checked json).
+        // Let's look at `beneficiarios.json`: Only Dimensions have explicit "type".
+        // Measures have "sql".
+        // However, the rule is "if field OR dimension has numeric type".
+        // If it's a measure, it's aggregated, so it's likely numeric (SUM/COUNT).
+        // If we return 'FLOAT' for all measures, they will be formatted.
+        if (meas) return 'FLOAT';
+
+        return undefined;
+    };
+
     return (
         <ErrorBoundary>
             <div>
@@ -65,6 +88,7 @@ export const ResultsView: React.FC<ResultsViewProps> = ({ result, resultMode, ac
                     resultMode={resultMode}
                     getColumnLabel={getColumnLabel}
                     getColumnOverride={getColumnOverride}
+                    getColumnType={getColumnType}
                 />
             </div>
         </ErrorBoundary>

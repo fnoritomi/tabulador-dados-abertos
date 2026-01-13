@@ -16,13 +16,15 @@ interface VirtualizedTableProps {
     resultMode: 'raw' | 'semantic';
     getColumnLabel: (colName: string) => string;
     getColumnOverride?: (colName: string) => { decimals?: number } | undefined;
+    getColumnType?: (colName: string) => string | undefined;
 }
 
 const VirtualizedTable: React.FC<VirtualizedTableProps> = ({
     data,
     schema,
     getColumnLabel,
-    getColumnOverride
+    getColumnOverride,
+    getColumnType
 }) => {
     if (!data || data.length === 0) return <div style={{ padding: '20px' }}>Sem dados para exibir.</div>;
 
@@ -32,16 +34,27 @@ const VirtualizedTable: React.FC<VirtualizedTableProps> = ({
     const columnTypes = useMemo(() => {
         const types: Record<string, 'DATE' | 'TIMESTAMP' | 'INTEGER' | 'FLOAT' | 'VARCHAR'> = {};
         schema.fields.forEach(f => {
-            let type = 'VARCHAR'; // Default
-            if (f.typeId === Type.Date) type = 'DATE';
-            else if (f.typeId === Type.Timestamp) type = 'TIMESTAMP';
-            else if (f.typeId === Type.Int) type = 'INTEGER';
-            else if (f.typeId === Type.Float || f.typeId === Type.Decimal) type = 'FLOAT';
-            // @ts-ignore
-            types[f.name] = type;
+            // Priority: Metadata > Schema
+            const metaType = getColumnType ? getColumnType(f.name) : undefined;
+            if (metaType) {
+                // Map metadata types to formatting types
+                if (metaType === 'INTEGER' || metaType === 'BIGINT') types[f.name] = 'INTEGER';
+                else if (metaType === 'FLOAT' || metaType === 'DOUBLE' || metaType === 'DECIMAL' || metaType === 'REAL') types[f.name] = 'FLOAT';
+                else if (metaType === 'DATE') types[f.name] = 'DATE';
+                else if (metaType === 'TIMESTAMP') types[f.name] = 'TIMESTAMP';
+                else types[f.name] = 'VARCHAR';
+            } else {
+                let type = 'VARCHAR'; // Default
+                if (f.typeId === Type.Date) type = 'DATE';
+                else if (f.typeId === Type.Timestamp) type = 'TIMESTAMP';
+                else if (f.typeId === Type.Int) type = 'INTEGER';
+                else if (f.typeId === Type.Float || f.typeId === Type.Decimal) type = 'FLOAT';
+                // @ts-ignore
+                types[f.name] = type;
+            }
         });
         return types;
-    }, [schema]);
+    }, [schema, getColumnType]);
 
     // Render fixed header
     const fixedHeaderContent = () => {

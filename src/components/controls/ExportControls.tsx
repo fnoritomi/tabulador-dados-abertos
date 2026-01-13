@@ -75,12 +75,21 @@ export const ExportControls: React.FC<ExportControlsProps> = ({
                 return colName;
             };
 
+            const getColumnType = (colName: string): string | undefined => {
+                if (!activeDataset?.semantic) return undefined;
+                const dim = activeDataset.semantic.dimensions.find(d => d.name === colName);
+                if (dim?.type) return dim.type;
+                const meas = activeDataset.semantic.measures.find(m => m.name === colName);
+                if (meas) return 'FLOAT'; // Force format for measures
+                return undefined;
+            };
+
             let isFirstBatch = true;
             // Handle Table vs Iterator
             const batches = (results as any).batches || results;
 
             for await (const batch of batches) {
-                const csvChunk = arrowBatchToCsv(batch, isFirstBatch, getColumnOverride, getColumnLabel);
+                const csvChunk = arrowBatchToCsv(batch, isFirstBatch, getColumnOverride, getColumnLabel, getColumnType);
                 await writable.write(csvChunk);
                 isFirstBatch = false;
             }

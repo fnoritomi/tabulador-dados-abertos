@@ -59,16 +59,17 @@ const VirtualizedTable: React.FC<VirtualizedTableProps> = ({
     // Render fixed header
     const fixedHeaderContent = () => {
         return (
-            <tr style={{ backgroundColor: '#f9f9f9', borderBottom: '2px solid #ddd' }}>
+            <tr style={{ backgroundColor: 'var(--bg-panel)', borderBottom: '2px solid var(--border-color)' }}>
                 {columns.map(col => (
                     <th key={col} style={{
                         padding: '10px',
                         textAlign: 'left',
-                        borderRight: '1px solid #eee',
+                        borderRight: '1px solid var(--border-color)',
                         whiteSpace: 'nowrap',
                         fontWeight: 'bold',
                         fontSize: '13px',
-                        backgroundColor: '#f9f9f9' // Ensure opaque for sticky
+                        backgroundColor: 'var(--bg-panel)', // Ensure opaque for sticky
+                        color: 'var(--text-main)'
                     }}>
                         {getColumnLabel(col)}
                     </th>
@@ -92,14 +93,15 @@ const VirtualizedTable: React.FC<VirtualizedTableProps> = ({
                     return (
                         <td key={col} style={{
                             padding: '8px',
-                            borderRight: '1px solid #eee',
-                            borderBottom: '1px solid #eee',
+                            borderRight: '1px solid var(--border-color)',
+                            borderBottom: '1px solid var(--border-color)',
                             whiteSpace: 'nowrap',
                             maxWidth: '300px',
                             overflow: 'hidden',
                             textOverflow: 'ellipsis',
                             fontSize: '13px',
-                            textAlign: (colType === 'INTEGER' || colType === 'FLOAT') ? 'right' : 'left'
+                            textAlign: (colType === 'INTEGER' || colType === 'FLOAT') ? 'right' : 'left',
+                            color: 'var(--text-main)'
                         }}>
                             {displayVal}
                         </td>
@@ -110,7 +112,7 @@ const VirtualizedTable: React.FC<VirtualizedTableProps> = ({
     };
 
     return (
-        <div style={{ height: '400px', width: '100%', border: '1px solid #ddd', borderRadius: '4px' }}>
+        <div style={{ height: '400px', width: '100%', border: '1px solid var(--border-color)', borderRadius: '4px', background: 'var(--bg-app)' }}>
             <TableVirtuoso
                 data={data}
                 fixedHeaderContent={fixedHeaderContent}

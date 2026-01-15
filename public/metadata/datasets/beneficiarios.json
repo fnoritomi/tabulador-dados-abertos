@@ -3,22 +3,12 @@
     "name": "Beneficiarios",
     "sources": [
         "beneficiarios/ben_202201.parquet",
-        "beneficiarios/ben_202202.parquet",
-        "beneficiarios/ben_202203.parquet",
-        "beneficiarios/ben_202204.parquet",
-        "beneficiarios/ben_202205.parquet",
-        "beneficiarios/ben_202206.parquet",
-        "beneficiarios/ben_202207.parquet",
-        "beneficiarios/ben_202208.parquet",
-        "beneficiarios/ben_202209.parquet",
-        "beneficiarios/ben_202210.parquet",
-        "beneficiarios/ben_202211.parquet",
-        "beneficiarios/ben_202212.parquet"
+        "beneficiarios/ben_202202.parquet"
     ],
     "schema": [
         {
             "name": "COMPETENCIA",
-            "type": "VARCHAR"
+            "type": "INTEGER"
         },
         {
             "name": "CD_OPERADORA",
@@ -97,83 +87,120 @@
         "dimensions": [
             {
                 "name": "COMPETENCIA",
-                "type": "VARCHAR",
-                "label": "Competência"
+                "label": "Competência",
+                "dataType": "VARCHAR",
+                "sql": "COMPETENCIA"
             },
             {
                 "name": "CD_OPERADORA",
-                "type": "VARCHAR",
-                "label": "Código Operadora"
+                "label": "Código Operadora",
+                "dataType": "VARCHAR",
+                "sql": "CD_OPERADORA"
             },
             {
                 "name": "NM_RAZAO_SOCIAL",
-                "type": "VARCHAR",
-                "label": "Razão Social"
+                "label": "Razão Social",
+                "dataType": "VARCHAR",
+                "sql": "NM_RAZAO_SOCIAL"
             },
             {
                 "name": "MODALIDADE_OPERADORA",
-                "type": "VARCHAR",
-                "label": "Modalidade Operadora"
+                "label": "Modalidade Operadora",
+                "dataType": "VARCHAR",
+                "sql": "MODALIDADE_OPERADORA"
             },
             {
-                "name": "SG_UF",
-                "type": "VARCHAR",
-                "label": "Estado"
-            },
-            {
-                "name": "CD_MUNICIPIO",
-                "type": "VARCHAR",
-                "label": "Código Município"
-            },
-            {
-                "name": "NM_MUNICIPIO",
-                "type": "VARCHAR",
-                "label": "Município"
+                "name": "residencia",
+                "label": "Residência",
+                "type": "geo",
+                "subDimensions": [
+                    {
+                        "name": "estado",
+                        "label": "Estado",
+                        "attributes": [
+                            {
+                                "name": "uf",
+                                "label": "UF",
+                                "sql": "SG_UF",
+                                "type": "VARCHAR"
+                            }
+                        ],
+                        "subDimensions": [
+                            {
+                                "name": "municipio",
+                                "label": "Município",
+                                "attributes": [
+                                    {
+                                        "name": "cd_municipio",
+                                        "label": "Código Município",
+                                        "sql": "CD_MUNICIPIO",
+                                        "type": "VARCHAR"
+                                    },
+                                    {
+                                        "name": "municipio",
+                                        "label": "Município",
+                                        "sql": "NM_MUNICIPIO",
+                                        "type": "VARCHAR"
+                                    }
+                                ]
+                            }
+                        ]
+                    }
+                ]
             },
             {
                 "name": "TP_SEXO",
-                "type": "VARCHAR",
-                "label": "Sexo"
+                "label": "Sexo",
+                "dataType": "VARCHAR",
+                "sql": "TP_SEXO"
             },
             {
                 "name": "DE_FAIXA_ETARIA",
-                "type": "VARCHAR",
-                "label": "Faixa Etária"
+                "label": "Faixa Etária",
+                "dataType": "VARCHAR",
+                "sql": "DE_FAIXA_ETARIA"
             },
             {
                 "name": "DE_FAIXA_ETARIA_REAJ",
-                "type": "VARCHAR",
-                "label": "Faixa Etária Reajuste"
+                "label": "Faixa Etária Reajuste",
+                "dataType": "VARCHAR",
+                "sql": "DE_FAIXA_ETARIA_REAJ"
             },
             {
                 "name": "TP_VIGENCIA_PLANO",
-                "type": "VARCHAR",
-                "label": "Tipo Vigência Plano"
+                "label": "Tipo Vigência Plano",
+                "dataType": "VARCHAR",
+                "sql": "TP_VIGENCIA_PLANO"
             },
             {
                 "name": "DE_CONTRATACAO_PLANO",
-                "type": "VARCHAR",
-                "label": "Tipo Contratação"
+                "label": "Tipo Contratação",
+                "dataType": "VARCHAR",
+                "sql": "DE_CONTRATACAO_PLANO"
             },
             {
                 "name": "DE_SEGMENTACAO_PLANO",
-                "type": "VARCHAR",
-                "label": "Segmentação Assistencial"
+                "label": "Segmentação Assistencial",
+                "dataType": "VARCHAR",
+                "sql": "DE_SEGMENTACAO_PLANO"
             },
             {
                 "name": "DE_ABRG_GEOGRAFICA_PLANO",
-                "type": "VARCHAR",
-                "label": "Abrangência Geográfica"
+                "label": "Abrangência Geográfica",
+                "dataType": "VARCHAR",
+                "sql": "DE_ABRG_GEOGRAFICA_PLANO"
             },
             {
                 "name": "COBERTURA_ASSIST_PLAN",
-                "type": "VARCHAR",
-                "label": "Cobertura Assistência"
+                "label": "Cobertura Assistência",
+                "dataType": "VARCHAR",
+                "sql": "COBERTURA_ASSIST_PLAN"
             },
             {
                 "name": "TIPO_VINCULO",
-                "type": "VARCHAR",
-                "label": "Tipo Vínculo"
+                "label": "Tipo Vínculo",
+                "dataType": "VARCHAR",
+                "sql": "TIPO_VINCULO"
             }
         ],
         "measures": [

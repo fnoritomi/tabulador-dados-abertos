@@ -1,4 +1,5 @@
 import type { Dataset } from '../../lib/metadata';
+import { MetadataService } from './MetadataService';
 import type { Filter, QueryState } from '../../types';
 
 export const buildSql = (
@@ -42,15 +43,47 @@ export const buildSql = (
     if (filters.length > 0) {
         const conditions = filters.map(f => {
             if (!f.value) return null;
-            const colDef = activeDataset.schema.find(c => c.name === f.column);
-            const isString = colDef?.type === 'VARCHAR' || colDef?.type === 'DATE';
+            let sqlCol = f.column;
+            let isString = false;
+
+            // 1. Resolve Semantic Definition (if available)
+            // This is crucial for aliases (e.g. 'uf' -> 'SG_UF') and types
+            // 1. Resolve Semantic Definition (if available)
+            // This is crucial for aliases (e.g. 'uf' -> 'SG_UF') and types
+            if (activeDataset.semantic) {
+                const semDef = MetadataService.findDimensionOrAttribute(activeDataset, f.column);
+                if (semDef) {
+                    // Check if it's an Attribute (has sql property)
+                    if ('sql' in semDef) {
+                        sqlCol = semDef.sql;
+                        // Use strict type from Attribute (type) or Simple Dimension (dataType)
+                        const typeToCheck = (semDef as any).dataType || semDef.type;
+                        if (typeToCheck === 'VARCHAR' || typeToCheck === 'DATE' || typeToCheck === 'TIMESTAMP') {
+                            isString = true;
+                        }
+                    } else if (semDef.type) {
+                        // It's a Dimension with a semantic type (e.g. 'geo'), not DataType
+                        // We probably shouldn't infer isString from Dimension.type unless we map 'geo' -> string?
+                        // For now, ignore Dimension types for quoting logic.
+                    }
+                }
+            }
+
+            // 2. Check Raw Schema (fallback or confirmation)
+            // If we have a mapped SQL column (e.g. 'SG_UF'), check its type in schema
+            // If we didn't find a semantic def, checks f.column directly against schema
+            const colDef = activeDataset.schema.find(c => c.name === sqlCol);
+            if (!isString && colDef) {
+                isString = colDef.type === 'VARCHAR' || colDef.type === 'DATE';
+            }
+
             let val = f.value;
             if (f.operator === 'IN') {
                 val = `(${f.value.split(',').map(v => isString ? `'${v.trim()}'` : v.trim()).join(', ')})`;
             } else if (isString) {
                 val = `'${f.value}'`;
             }
-            return `${f.column} ${f.operator} ${val}`;
+            return `${sqlCol} ${f.operator} ${val}`;
         }).filter(Boolean);
 
         if (conditions.length > 0) {
@@ -158,9 +191,18 @@ export const buildSql = (
 
         // Dimensions to select in aggregation (from `selectedDimensions`)
         // Ensure we handle aliases for dimensions if they have SQL definitions
+        // Also resolves nested attributes via MetadataService
+        // Dimensions to select in aggregation (from `selectedDimensions`)
+        // Ensure we handle aliases for dimensions if they have SQL definitions
+        // Also resolves nested attributes via MetadataService
         const aggDims = selectedDimensions.map(d => {
-            const dimDef = activeDataset.semantic?.dimensions.find(def => def.name === d);
-            return dimDef?.sql ? `${dimDef.sql} AS ${dimDef.name}` : d;
+            const dimDef = MetadataService.findDimensionOrAttribute(activeDataset, d);
+            // Only Attributes have 'sql'. Dimensions are just groupings now and shouldn't be selected ideally.
+            // But if selected, we default to the name.
+            if (dimDef && 'sql' in dimDef) {
+                return `${dimDef.sql} AS ${dimDef.name}`;
+            }
+            return d;
         });
 
         const aggSelects = [...aggDims, ...aggMeasures].join(', ');

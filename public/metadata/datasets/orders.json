@@ -46,18 +46,21 @@
         "dimensions": [
             {
                 "name": "o_orderkey",
-                "type": "INTEGER",
-                "label": "Order id"
+                "label": "Order id",
+                "dataType": "INTEGER",
+                "sql": "o_orderkey"
             },
             {
                 "name": "o_orderstatus",
-                "type": "VARCHAR",
-                "label": "Order Status"
+                "label": "Order Status",
+                "dataType": "VARCHAR",
+                "sql": "o_orderstatus"
             },
             {
                 "name": "o_orderpriority",
-                "type": "VARCHAR",
-                "label": "Priority"
+                "label": "Priority",
+                "dataType": "VARCHAR",
+                "sql": "o_orderpriority"
             }
         ],
         "measures": [

@@ -1,38 +1,99 @@
 :root {
+  /* --- Typography --- */
   font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
   line-height: 1.5;
   font-weight: 400;
-
-  color-scheme: light dark;
-  color: rgba(255, 255, 255, 0.87);
-  background-color: #242424;
 
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+
+  /* --- Semantic Colors (Default/Light) --- */
+  --bg-app: #ffffff;
+  --bg-panel: #f9f9f9;
+  --bg-panel-secondary: #f0f7ff;
+  --bg-input: #ffffff;
+
+  --text-main: #213547;
+  --text-secondary: #666666;
+  --text-inverse: #ffffff;
+
+  --border-color: #dddddd;
+  --border-accent: #d0e1f9;
+
+  --primary-color: #646cff;
+  --primary-hover: #535bf2;
+
+  --accent-color: #0056b3;
+
+  /* Alert Colors (Light) */
+  --color-error: #d32f2f;
+  --color-success: #28a745;
+  --color-warning: #e67e22;
+  --color-info: #007bff;
 }
 
-a {
-  font-weight: 500;
-  color: #646cff;
-  text-decoration: inherit;
-}
-a:hover {
-  color: #535bf2;
+/* --- Dark Theme Overrides --- */
+[data-theme='dark'] {
+  --bg-app: #242424;
+  --bg-panel: #1a1a1a;
+  --bg-panel-secondary: #2a2c30;
+  --bg-input: #333333;
+
+  --text-main: rgba(255, 255, 255, 0.87);
+  --text-secondary: #aaaaaa;
+
+  --border-color: #444444;
+  --border-accent: #555555;
+
+  --primary-color: #747bff;
+  --primary-hover: #535bf2;
+
+  --accent-color: #64a7ff;
+
+  /* Alert Colors (Dark) */
+  --color-error: #ff6b6b;
+  --color-success: #51cf66;
+  --color-warning: #fcc419;
+  --color-info: #339af0;
 }
 
+/* --- Global Styles using Tokens --- */
 body {
   margin: 0;
   display: flex;
   place-items: center;
+  /* Centering might be legacy specific, keeping for now */
   min-width: 320px;
   min-height: 100vh;
+  background-color: var(--bg-app);
+  color: var(--text-main);
+  transition: background-color 0.3s, color 0.3s;
 }
 
-h1 {
-  font-size: 3.2em;
-  line-height: 1.1;
+/* If app is full width, we might want to reset place-items for #root */
+#root {
+  width: 100%;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  color: var(--text-main);
+}
+
+a {
+  font-weight: 500;
+  color: var(--primary-color);
+  text-decoration: inherit;
+}
+
+a:hover {
+  color: var(--primary-hover);
 }
 
 button {
@@ -42,27 +103,46 @@ button {
   font-size: 1em;
   font-weight: 500;
   font-family: inherit;
-  background-color: #1a1a1a;
+  background-color: var(--bg-panel);
+  color: var(--text-main);
   cursor: pointer;
-  transition: border-color 0.25s;
+  transition: border-color 0.25s, background-color 0.3s;
 }
+
 button:hover {
-  border-color: #646cff;
+  border-color: var(--primary-color);
 }
+
 button:focus,
 button:focus-visible {
   outline: 4px auto -webkit-focus-ring-color;
 }
 
-@media (prefers-color-scheme: light) {
-  :root {
-    color: #213547;
-    background-color: #ffffff;
-  }
-  a:hover {
-    color: #747bff;
-  }
-  button {
-    background-color: #f9f9f9;
-  }
+input,
+select,
+textarea {
+  background-color: var(--bg-input);
+  color: var(--text-main);
+  border: 1px solid var(--border-color);
+  padding: 8px;
+  border-radius: 4px;
+}
+
+/* Scrollbar styling for dark mode */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-app);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: 5px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-secondary);
 }

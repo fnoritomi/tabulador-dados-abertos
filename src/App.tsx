@@ -4,7 +4,9 @@ import { useDataset } from './hooks/useDataset';
 import { useQueryExecutor } from './hooks/useQueryExecutor';
 import { useAppQueryState } from './hooks/useAppQueryState';
 import { useDuckDBWarmup } from './hooks/useDuckDBWarmup';
+import { useTheme } from './hooks/useTheme';
 import { buildSql } from './services/semantic/queryBuilder';
+import { MetadataService } from './services/semantic/MetadataService';
 import { DatasetSelector } from './components/controls/DatasetSelector';
 import { QueryBuilderUI } from './components/controls/QueryBuilderUI';
 import { FilterList } from './components/controls/FilterList';
@@ -17,6 +19,9 @@ import { format } from 'sql-formatter';
 import { setConfig, type AppFormattingConfig } from './lib/formatting';
 
 function App() {
+  // Theme Hook
+  const { theme, setTheme } = useTheme();
+
   // Hooks
   const { db, status: dbStatus, version } = useDuckDB();
   const {
@@ -138,7 +143,7 @@ function App() {
   // Options
   const filterOptions = activeDataset ? (
     isSemanticMode() && activeDataset.semantic
-      ? activeDataset.semantic.dimensions
+      ? MetadataService.getFlatDimensions(activeDataset)
       : activeDataset.schema
   ) : [];
 
@@ -146,7 +151,21 @@ function App() {
 
   return (
     <div style={{ padding: '20px', fontFamily: 'sans-serif' }}>
-      <h1>DuckDB WASM - Refatorado</h1>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <h1>DuckDB WASM - Refatorado</h1>
+
+        {/* Theme Toggle */}
+        <select
+          value={theme}
+          onChange={(e) => setTheme(e.target.value as any)}
+          style={{ padding: '5px', borderRadius: '4px', cursor: 'pointer' }}
+          aria-label="Selecionar tema"
+        >
+          <option value="system">Sistema</option>
+          <option value="light">Claro</option>
+          <option value="dark">Escuro</option>
+        </select>
+      </div>
 
       <StatusBar dbStatus={dbStatus} version={version} />
 
@@ -179,8 +198,8 @@ function App() {
             onRemove={(id) => qa.removeFilter(id, 'dimension')}
             onUpdate={(id, f, v) => qa.updateFilter(id, f, v, 'dimension')}
             type="dimension"
-            color="#b38f00"
-            bgColor="#fff9e6"
+            color="var(--text-main)"
+            bgColor="var(--bg-panel-secondary)"
           />
 
           {isSemanticMode() && activeDataset.semantic && (
@@ -192,8 +211,8 @@ function App() {
               onRemove={(id) => qa.removeFilter(id, 'measure')}
               onUpdate={(id, f, v) => qa.updateFilter(id, f, v, 'measure')}
               type="measure"
-              color="#155724"
-              bgColor="#d4edda"
+              color="var(--text-main)"
+              bgColor="var(--bg-panel-secondary)"
             />
           )}
 
@@ -205,7 +224,7 @@ function App() {
                 type="number"
                 value={qs.limit}
                 onChange={(e) => qa.setLimit(Number(e.target.value))}
-                style={{ padding: '5px', width: '80px' }}
+                style={{ padding: '5px', width: '80px', background: 'var(--bg-input)', color: 'var(--text-main)', border: '1px solid var(--border-color)' }}
               />
             </div>
             <label style={{ fontWeight: 'bold' }}>SQL Preview:</label>

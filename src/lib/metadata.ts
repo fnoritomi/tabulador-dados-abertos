@@ -4,11 +4,29 @@ export interface DatasetIndexItem {
     path: string;
 }
 
+export type DataType = 'VARCHAR' | 'INTEGER' | 'FLOAT' | 'DATE' | 'TIMESTAMP' | 'BOOLEAN';
+
+export interface Attribute {
+    name: string;
+    type: DataType;
+    label: string;
+    sql: string;
+    description?: string;
+}
+
 export interface Dimension {
     name: string;
-    type: string;
-    label?: string;
+    label: string;
+    description?: string;
+    type?: string; // semantic type (e.g. 'geo', 'time') - optional
+
+    // Simple Dimension (Leaf) properties
+    dataType?: DataType;
     sql?: string;
+
+    // Composite Dimension (Node) properties
+    attributes?: Attribute[];
+    subDimensions?: Dimension[];
 }
 
 export type WindowChoice = 'LAST_VALUE' | 'FIRST_VALUE' | 'MAX' | 'MIN';

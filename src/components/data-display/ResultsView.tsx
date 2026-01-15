@@ -2,12 +2,14 @@ import React from 'react';
 import VirtualizedTable from './VirtualizedTable';
 import { Table } from 'apache-arrow';
 import type { Dataset } from '../../lib/metadata';
+import type { AppFormattingConfig } from '../../lib/formatting';
 import { MetadataService } from '../../services/semantic/MetadataService';
 
 interface ResultsViewProps {
     result: Table | null;
     resultMode: 'raw' | 'semantic';
     activeDataset: Dataset | null;
+    formattingConfig?: AppFormattingConfig;
 }
 
 class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { hasError: boolean, error: Error | null }> {
@@ -40,7 +42,7 @@ export const ResultsView: React.FC<ResultsViewProps> = ({ result, resultMode, ac
         return MetadataService.getColumnLabel(activeDataset, colName, resultMode);
     };
 
-    const getColumnOverride = (colName: string): { decimals?: number } | undefined => {
+    const getColumnOverride = (colName: string) => {
         return MetadataService.getColumnFormat(activeDataset, colName, resultMode);
     };
 

@@ -1,153 +1,184 @@
-export type DateFormatOrder = 'DMY' | 'MDY' | 'YMD';
+import type { FormatOptions } from './metadata';
 
-export interface AppFormattingConfig {
-    date: {
-        order: DateFormatOrder;
-        separator: string;
-    };
-    timestamp: {
-        order: DateFormatOrder;
-        dateSeparator: string;
-        timeSeparator: string;
-        dateTimeSeparator: string;
-    };
-    number: {
-        thousandSeparator: string;
-        decimalSeparator: string;
-    };
+export interface LocaleConfig {
+    code: string;
+    currency: string;
     csv: {
         separator: string;
         encoding: 'UTF-8' | 'UTF-8-BOM' | 'Windows-1252';
     };
 }
 
-export let DEFAULT_CONFIG: AppFormattingConfig = {
-    date: {
-        order: 'DMY',
-        separator: '/'
-    },
-    timestamp: {
-        order: 'DMY',
-        dateSeparator: '/',
-        timeSeparator: ':',
-        dateTimeSeparator: ' '
-    },
-    number: {
-        thousandSeparator: '.',
-        decimalSeparator: ','
-    },
+export interface AppFormattingConfig {
+    locale: string;
+    currency: string;
     csv: {
-        separator: ';', // Common in regions using comma for decimals
-        encoding: 'UTF-8' // Default
+        separator: string;
+        encoding: 'UTF-8' | 'UTF-8-BOM' | 'Windows-1252';
+    };
+    locales?: LocaleConfig[]; // Registry of available locales
+
+    defaults?: {
+        date?: FormatOptions;
+        timestamp?: FormatOptions;
+        number?: FormatOptions;
     }
+}
+
+export let DEFAULT_CONFIG: AppFormattingConfig = {
+    locale: 'pt-BR',
+    currency: 'BRL',
+    csv: { separator: ';', encoding: 'Windows-1252' }
 };
 
 export const setConfig = (config: AppFormattingConfig) => {
-    DEFAULT_CONFIG = config;
+    DEFAULT_CONFIG = {
+        ...DEFAULT_CONFIG,
+        ...config
+    };
 };
 
-/**
- * pads a number with leading zeros
- */
+// --- Intl Formatters ---
+
+export const formatDate = (value: Date | number | string, config: AppFormattingConfig = DEFAULT_CONFIG, options?: FormatOptions): string => {
+    if (value === null || value === undefined) return '';
+    const date = new Date(value);
+    if (isNaN(date.getTime())) return String(value);
+
+    // Explicit Pattern (legacy/custom support)
+    if (options?.pattern) {
+        return formatDateWithPattern(date, options.pattern);
+    }
+
+    // Default Intl Date
+    return new Intl.DateTimeFormat(options?.locale || config.locale, {
+        dateStyle: 'short', // e.g. dd/mm/yyyy
+        timeZone: 'UTC' // Data usually comes as UTC/Date-only, avoid shifting
+    }).format(date);
+};
+
+export const formatTimestamp = (value: Date | number | string, config: AppFormattingConfig = DEFAULT_CONFIG, options?: FormatOptions): string => {
+    if (value === null || value === undefined) return '';
+    const date = new Date(value);
+    if (isNaN(date.getTime())) return String(value);
+
+    if (options?.pattern) {
+        return formatDateWithPattern(date, options.pattern);
+    }
+
+    return new Intl.DateTimeFormat(options?.locale || config.locale, {
+        dateStyle: 'short',
+        timeStyle: 'medium',
+        timeZone: 'UTC'
+    }).format(date);
+};
+
+export const formatNumber = (value: number, config: AppFormattingConfig = DEFAULT_CONFIG, options?: FormatOptions): string => {
+    if (value === null || value === undefined || isNaN(value)) return '';
+
+    const locale = options?.locale || config.locale;
+    const isCurrency = options?.type === 'currency';
+    const isPercent = options?.type === 'percent';
+    const useSeparator = options?.useThousandsSeparator ?? true;
+
+    const intlOptions: Intl.NumberFormatOptions = {
+        useGrouping: useSeparator
+    };
+
+    if (isCurrency) {
+        intlOptions.style = 'currency';
+        intlOptions.currency = options?.currency || config.currency;
+    } else if (isPercent) {
+        intlOptions.style = 'percent';
+        // Percent logic: 0.1 -> 10%
+    } else {
+        intlOptions.style = 'decimal';
+    }
+
+    if (options?.decimals !== undefined) {
+        intlOptions.minimumFractionDigits = options.decimals;
+        intlOptions.maximumFractionDigits = options.decimals;
+    } else {
+        // Defaults if not specified check strict types
+        if (isPercent) {
+            intlOptions.minimumFractionDigits = 2;
+            intlOptions.maximumFractionDigits = 2;
+        }
+        // For standard numbers, let Intl decide or default to 0-3
+    }
+
+    // Legacy fix: if type=INTEGER implied by usage, force decimals 0
+    // But formatValue passes type argument so we use that in main function
+
+    return new Intl.NumberFormat(locale, intlOptions).format(value);
+};
+
+// --- Helpers ---
+
 const pad = (n: number) => n.toString().padStart(2, '0');
 
-/**
- * Formats a single date part (day, month, year) based on order using the provided separator
- */
-const combineDateParts = (day: number, month: number, year: number, order: DateFormatOrder, separator: string): string => {
-    const d = pad(day);
-    const m = pad(month);
-    const y = year.toString();
+const formatDateWithPattern = (date: Date, pattern: string): string => {
+    const d = pad(date.getUTCDate());
+    const m = pad(date.getUTCMonth() + 1);
+    const y = date.getUTCFullYear().toString();
+    const H = pad(date.getUTCHours());
+    const min = pad(date.getUTCMinutes());
+    const s = pad(date.getUTCSeconds());
 
-    switch (order) {
-        case 'DMY': return `${d}${separator}${m}${separator}${y}`;
-        case 'MDY': return `${m}${separator}${d}${separator}${y}`;
-        case 'YMD': return `${y}${separator}${m}${separator}${d}`;
-    }
+    return pattern
+        .replace('dd', d)
+        .replace('MM', m)
+        .replace('yyyy', y)
+        .replace('yy', y.slice(-2))
+        .replace('HH', H)
+        .replace('mm', min)
+        .replace('ss', s);
 };
 
-export const formatDate = (value: Date | number | string, config: AppFormattingConfig = DEFAULT_CONFIG): string => {
-    if (value === null || value === undefined) return '';
-    const date = new Date(value);
-    if (isNaN(date.getTime())) return String(value);
 
-    return combineDateParts(
-        date.getUTCDate(), // Use UTC to avoid timezone shifts from raw data usually
-        date.getUTCMonth() + 1,
-        date.getUTCFullYear(),
-        config.date.order,
-        config.date.separator
-    );
-};
-
-export const formatTimestamp = (value: Date | number | string, config: AppFormattingConfig = DEFAULT_CONFIG): string => {
-    if (value === null || value === undefined) return '';
-    const date = new Date(value);
-    if (isNaN(date.getTime())) return String(value);
-
-    const datePart = combineDateParts(
-        date.getUTCDate(),
-        date.getUTCMonth() + 1,
-        date.getUTCFullYear(),
-        config.timestamp.order,
-        config.timestamp.dateSeparator
-    );
-
-    const timePart = `${pad(date.getUTCHours())}${config.timestamp.timeSeparator}${pad(date.getUTCMinutes())}${config.timestamp.timeSeparator}${pad(date.getUTCSeconds())}`;
-
-    return `${datePart}${config.timestamp.dateTimeSeparator}${timePart}`;
-};
-
-export const formatInteger = (value: number, config: AppFormattingConfig = DEFAULT_CONFIG): string => {
-    if (value === null || value === undefined || isNaN(value)) return '';
-    // Format integer part with thousand separator
-    return Math.trunc(value).toString().replace(/\B(?=(\d{3})+(?!\d))/g, config.number.thousandSeparator);
-};
-
-export const formatFloat = (value: number, config: AppFormattingConfig = DEFAULT_CONFIG, decimalPlaces?: number): string => {
-    if (value === null || value === undefined || isNaN(value)) return '';
-
-    let strVal: string;
-    if (decimalPlaces !== undefined) {
-        // Round to fixed decimal places
-        strVal = value.toFixed(decimalPlaces);
-    } else {
-        strVal = value.toString();
-    }
-
-    const parts = strVal.split('.');
-    const integerPart = parts[0];
-    const decimalPart = parts[1] || '';
-
-    const formattedInteger = integerPart.replace(/\B(?=(\d{3})+(?!\d))/g, config.number.thousandSeparator);
-
-    if (decimalPart) {
-        return `${formattedInteger}${config.number.decimalSeparator}${decimalPart}`;
-    } else {
-        return formattedInteger;
-    }
-};
+// --- Main Export ---
 
 export const formatValue = (
     value: any,
     type: 'DATE' | 'TIMESTAMP' | 'INTEGER' | 'FLOAT' | 'VARCHAR' | 'OTHER',
     config: AppFormattingConfig = DEFAULT_CONFIG,
-    overrides?: { decimals?: number }
+    overrides?: FormatOptions
 ): string => {
     if (value === null || value === undefined) return '';
 
-    switch (type) {
+    // Handle "Type" overrides from Metadata that map to simple Types here
+    let effectiveType = type;
+    if (overrides) {
+        if (overrides.type === 'date') effectiveType = 'DATE';
+        if (overrides.type === 'datetime') effectiveType = 'TIMESTAMP';
+        // 'number', 'currency', 'percent' all fall into Number logic, 
+        // but we keep the main type switch for signature.
+    }
+
+    switch (effectiveType) {
         case 'DATE':
-            return formatDate(value, config);
+            return formatDate(value, config, overrides);
         case 'TIMESTAMP':
-            return formatTimestamp(value, config);
+            return formatTimestamp(value, config, overrides);
         case 'INTEGER':
-            return formatInteger(Number(value), config);
+            // Force decimals 0 for INTEGER if not overridden
+            return formatNumber(Number(value), config, { decimals: 0, ...overrides });
         case 'FLOAT':
-            return formatFloat(Number(value), config, overrides?.decimals);
+            return formatNumber(Number(value), config, overrides);
         default:
-            if (value instanceof Date) return value.toLocaleString();
+            // If it's number-like (currency/percent) but type came as something else?
+            if ((overrides?.type === 'currency' || overrides?.type === 'percent' || overrides?.type === 'number') && typeof value === 'number') {
+                return formatNumber(value, config, overrides);
+            }
+
+            if (value instanceof Date) return formatDateTimestampAuto(value, config, overrides);
             if (typeof value === 'object') return JSON.stringify(value);
             return String(value);
     }
+};
+
+const formatDateTimestampAuto = (value: Date, config: AppFormattingConfig, overrides?: FormatOptions) => {
+    // Heuristic: if override says date/datetime
+    if (overrides?.type === 'date') return formatDate(value, config, overrides);
+    return formatTimestamp(value, config, overrides);
 };

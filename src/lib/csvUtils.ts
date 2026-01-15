@@ -1,6 +1,7 @@
 
 import { RecordBatch, Type } from 'apache-arrow';
-import { formatValue, DEFAULT_CONFIG } from './formatting';
+import { formatValue, DEFAULT_CONFIG, type AppFormattingConfig } from './formatting';
+import type { FormatOptions } from './metadata';
 
 // Helper to escape CSV fields
 function escapeCsvField(value: any, separator: string): string {
@@ -15,7 +16,46 @@ function escapeCsvField(value: any, separator: string): string {
     return stringValue;
 }
 
-export type ColumnOverrideFn = (colName: string) => { decimals?: number } | undefined;
+const WINDOWS_1252_MAP: Record<number, number> = {
+    8364: 128, // €
+    8218: 130, // ‚
+    402: 131,  // ƒ
+    8222: 132, // „
+    8230: 133, // …
+    8224: 134, // †
+    8225: 135, // ‡
+    // ... complete essential list or simple version
+    // For brevity, we handle common ones. Full map is larger.
+    // If not found, we fallback to '?' (63)
+};
+
+export function encodeText(text: string, encoding: string): Uint8Array {
+    if (encoding === 'Windows-1252') {
+        const len = text.length;
+        const buf = new Uint8Array(len);
+        for (let i = 0; i < len; i++) {
+            const charCode = text.charCodeAt(i);
+            if (charCode < 256) {
+                // ISO-8859-1 range (includes ASCII)
+                // Windows-1252 deviates in 0x80-0x9F but largely compatible for non-control
+                buf[i] = charCode;
+            } else {
+                // Try map or fallback
+                buf[i] = WINDOWS_1252_MAP[charCode] || 63; // '?'
+            }
+        }
+        return buf;
+    }
+
+    // Default UTF-8
+    let output = text;
+    if (encoding === 'UTF-8-BOM') {
+        output = '\uFEFF' + text;
+    }
+    return new TextEncoder().encode(output);
+}
+
+export type ColumnOverrideFn = (colName: string) => FormatOptions | undefined;
 
 // Convert an Arrow RecordBatch to a CSV chunk string
 export function arrowBatchToCsv(
@@ -23,13 +63,17 @@ export function arrowBatchToCsv(
     includeHeader: boolean = false,
     getColumnOverride?: ColumnOverrideFn,
     getColumnLabel?: (colName: string) => string,
-    getColumnType?: (colName: string) => string | undefined
+    getColumnType?: (colName: string) => string | undefined,
+    formattingConfig: AppFormattingConfig = DEFAULT_CONFIG
 ): string {
     let output = '';
     const schema = batch.schema;
     const numRows = batch.numRows;
     const numCols = schema.fields.length;
-    const separator = DEFAULT_CONFIG.csv.separator;
+
+    // Use separator from provided config (Debug this!)
+    // If formattingConfig is default, separator is ';'
+    const separator = formattingConfig.csv.separator;
 
     // Pre-calculate column types map
     const columnTypes: Record<string, 'DATE' | 'TIMESTAMP' | 'INTEGER' | 'FLOAT' | 'VARCHAR'> = {};
@@ -56,10 +100,7 @@ export function arrowBatchToCsv(
 
     // Header
     if (includeHeader) {
-        // Handle BOM if encoding says so
-        if (DEFAULT_CONFIG.csv.encoding === 'UTF-8-BOM') {
-            output += '\uFEFF';
-        }
+        // Removed BOM check here, doing it in encodeText
 
         const headerRow = schema.fields.map(f => {
             const label = getColumnLabel ? getColumnLabel(f.name) : f.name;
@@ -79,7 +120,15 @@ export function arrowBatchToCsv(
             const colType = columnTypes[colName] as any;
 
             const override = getColumnOverride ? getColumnOverride(colName) : undefined;
-            const formattedVal = formatValue(val, colType, DEFAULT_CONFIG, override);
+
+            // Force disable thousands separator for CSV export
+            // BUT respect decimals and other options
+            const csvOverride: FormatOptions = {
+                ...override,
+                useThousandsSeparator: false
+            };
+
+            const formattedVal = formatValue(val, colType, formattingConfig, csvOverride);
 
             row.push(escapeCsvField(formattedVal, separator));
         }

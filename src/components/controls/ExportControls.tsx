@@ -3,6 +3,7 @@ import * as duckdb from '@duckdb/duckdb-wasm';
 import type { Dataset } from '../../lib/metadata';
 import type { QueryState } from '../../types';
 import { useCsvExport } from '../../hooks/useCsvExport';
+import type { AppFormattingConfig } from '../../lib/formatting';
 
 interface ExportControlsProps {
     db: duckdb.AsyncDuckDB | null;
@@ -14,6 +15,7 @@ interface ExportControlsProps {
     onExportStart?: () => void;
     onExportEnd?: (result: { success: boolean; message?: string; details?: { time: number; sizeMB: number; url?: string } }) => void;
     onExportStatus?: (msg: string) => void;
+    formattingConfig: AppFormattingConfig;
 }
 
 export const ExportControls: React.FC<ExportControlsProps> = ({
@@ -23,7 +25,8 @@ export const ExportControls: React.FC<ExportControlsProps> = ({
     disabled = false,
     onExportStart,
     onExportEnd,
-    onExportStatus
+    onExportStatus,
+    formattingConfig
 }) => {
 
     const { exporting, cancelling, runExport, cancelExport } = useCsvExport();
@@ -37,7 +40,8 @@ export const ExportControls: React.FC<ExportControlsProps> = ({
             queryState,
             filters,
             measureFilters,
-            onStatus: onExportStatus
+            onStatus: onExportStatus,
+            formattingConfig
         });
 
         onExportEnd?.(result);

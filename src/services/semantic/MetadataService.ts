@@ -1,4 +1,4 @@
-import type { Dataset, Dimension, Attribute } from '../../lib/metadata';
+import type { Dataset, Dimension, Attribute, FormatOptions } from '../../lib/metadata';
 
 export class MetadataService {
     /**
@@ -124,13 +124,28 @@ export class MetadataService {
     /**
      * Resolves formatting options (e.g. decimals) for a column.
      */
-    static getColumnFormat(dataset: Dataset | null, colName: string, mode: 'semantic' | 'raw' = 'raw'): { decimals?: number } | undefined {
+    /**
+     * Resolves formatting options for a column.
+     */
+    static getColumnFormat(dataset: Dataset | null, colName: string, mode: 'semantic' | 'raw' = 'raw'): FormatOptions | undefined {
         if (!dataset || mode === 'raw') return undefined;
         if (!dataset.semantic) return undefined;
 
+        // Check Measures
         const meas = dataset.semantic.measures.find(m => m.name === colName);
-        if (meas?.display_decimals !== undefined) {
-            return { decimals: meas.display_decimals };
+        if (meas) {
+            // Prioritize new 'format' object
+            if (meas.format) return meas.format;
+            // Fallback to deprecated 'display_decimals'
+            if (meas.display_decimals !== undefined) {
+                return { type: 'number', decimals: meas.display_decimals };
+            }
+        }
+
+        // Check Dimensions / Attributes
+        const def = this.findDimensionOrAttribute(dataset, colName);
+        if (def && def.format) {
+            return def.format;
         }
 
         return undefined;

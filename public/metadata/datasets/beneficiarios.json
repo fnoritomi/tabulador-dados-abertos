@@ -211,22 +211,38 @@
                 "non_additive_dimension": {
                     "dimension_name": "COMPETENCIA",
                     "window_choice": "MAX"
+                },
+                "format": {
+                    "type": "number",
+                    "decimals": 0
                 }
             },
             {
                 "name": "qt_adesoes",
                 "sql": "SUM(QT_ADESOES)",
-                "label": "Qt Adesões"
+                "label": "Qt Adesões",
+                "format": {
+                    "type": "number",
+                    "decimals": 0
+                }
             },
             {
                 "name": "qt_cancelamentos",
                 "sql": "SUM(QT_CANCELAMENTOS)",
-                "label": "Qt Cancelamentos"
+                "label": "Qt Cancelamentos",
+                "format": {
+                    "type": "number",
+                    "decimals": 0
+                }
             },
             {
                 "name": "qt_linhas",
                 "sql": "COUNT(*)",
-                "label": "Qt Linhas"
+                "label": "Qt Linhas",
+                "format": {
+                    "type": "number",
+                    "decimals": 0
+                }
             }
         ]
     }

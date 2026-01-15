@@ -1,7 +1,8 @@
 import React, { useMemo } from 'react';
 import { TableVirtuoso } from 'react-virtuoso';
 import { Table, Type } from 'apache-arrow';
-import { formatValue, DEFAULT_CONFIG } from '../../lib/formatting';
+import { formatValue, DEFAULT_CONFIG, type AppFormattingConfig } from '../../lib/formatting';
+import type { FormatOptions } from '../../lib/metadata';
 
 // Using react-virtuoso for virtualization.
 // It renders standard HTML tables, is responsive, and handles sticky headers natively.
@@ -15,8 +16,9 @@ interface VirtualizedTableProps {
     schema: ArrowSchema;
     resultMode: 'raw' | 'semantic';
     getColumnLabel: (colName: string) => string;
-    getColumnOverride?: (colName: string) => { decimals?: number } | undefined;
+    getColumnOverride?: (colName: string) => FormatOptions | undefined;
     getColumnType?: (colName: string) => string | undefined;
+    formattingConfig?: AppFormattingConfig;
 }
 
 const VirtualizedTable: React.FC<VirtualizedTableProps> = ({
@@ -24,7 +26,8 @@ const VirtualizedTable: React.FC<VirtualizedTableProps> = ({
     schema,
     getColumnLabel,
     getColumnOverride,
-    getColumnType
+    getColumnType,
+    formattingConfig
 }) => {
     if (!data || data.length === 0) return <div style={{ padding: '20px' }}>Sem dados para exibir.</div>;
 

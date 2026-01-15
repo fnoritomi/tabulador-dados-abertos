@@ -5,6 +5,7 @@ import { buildSql } from '../services/semantic/queryBuilder';
 import { MetadataService } from '../services/semantic/MetadataService';
 import type { Dataset } from '../lib/metadata';
 import type { QueryState } from '../types';
+import type { AppFormattingConfig } from '../lib/formatting';
 
 interface ExportOptions {
     db: duckdb.AsyncDuckDB | null;
@@ -13,6 +14,7 @@ interface ExportOptions {
     filters: any[];
     measureFilters: any[];
     onStatus?: (msg: string) => void;
+    formattingConfig: AppFormattingConfig;
 }
 
 interface ExportResult {
@@ -35,7 +37,7 @@ export function useCsvExport() {
     }, [exporting, cancelling]);
 
     const runExport = useCallback(async (options: ExportOptions): Promise<ExportResult> => {
-        const { db, activeDataset, queryState, filters, measureFilters, onStatus } = options;
+        const { db, activeDataset, queryState, filters, measureFilters, onStatus, formattingConfig } = options;
 
         if (!db || !activeDataset) {
             return { success: false, message: "Banco de dados ou dataset indisponível." };
@@ -71,8 +73,7 @@ export function useCsvExport() {
             const reader = await conn.send(exportSql, true);
 
             // 4. Transform and Write
-            const { arrowBatchToCsv } = await import('../lib/csvUtils'); // Dynamic import
-            const encoder = new TextEncoder();
+            const { arrowBatchToCsv, encodeText } = await import('../lib/csvUtils'); // Dynamic import
 
             // Prepare formatters with MetadataService
             const getColumnOverride = (colName: string) => MetadataService.getColumnFormat(activeDataset, colName, 'semantic');
@@ -86,8 +87,10 @@ export function useCsvExport() {
                 if (signal.aborted) throw new Error("Cancelado");
 
                 // @ts-ignore
-                const csvChunk = arrowBatchToCsv(batch as any, isFirstBatch, getColumnOverride, getColumnLabel, getColumnType);
-                const bytes = encoder.encode(csvChunk);
+                const csvChunk = arrowBatchToCsv(batch as any, isFirstBatch, getColumnOverride, getColumnLabel, getColumnType, formattingConfig);
+
+                // Use custom encoding
+                const bytes = encodeText(csvChunk, formattingConfig.csv.encoding);
 
                 await writer.write(bytes);
 

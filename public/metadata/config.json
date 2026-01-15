@@ -1,20 +1,28 @@
 {
-    "date": {
-        "order": "YMD",
-        "separator": "-"
-    },
-    "timestamp": {
-        "order": "YMD",
-        "dateSeparator": "-",
-        "timeSeparator": ":",
-        "dateTimeSeparator": " "
-    },
-    "number": {
-        "thousandSeparator": ".",
-        "decimalSeparator": ","
-    },
-    "csv": {
-        "separator": ";",
-        "encoding": "Windows-1252"
-    }
+    "locales": [
+        {
+            "code": "pt-BR",
+            "currency": "BRL",
+            "csv": {
+                "separator": ";",
+                "encoding": "Windows-1252"
+            }
+        },
+        {
+            "code": "en-US",
+            "currency": "USD",
+            "csv": {
+                "separator": ",",
+                "encoding": "UTF-8"
+            }
+        },
+        {
+            "code": "es-ES",
+            "currency": "EUR",
+            "csv": {
+                "separator": ";",
+                "encoding": "Windows-1252"
+            }
+        }
+    ]
 }

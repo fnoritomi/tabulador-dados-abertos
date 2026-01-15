@@ -3,6 +3,7 @@ import { ExportControls } from './ExportControls';
 import * as duckdb from '@duckdb/duckdb-wasm';
 import type { Dataset } from '../../lib/metadata';
 import type { QueryState, Filter } from '../../types';
+import type { AppFormattingConfig } from '../../lib/formatting';
 
 interface ExecutionBarProps {
     db: duckdb.AsyncDuckDB | null;
@@ -19,6 +20,7 @@ interface ExecutionBarProps {
     onExportStart: () => void;
     onExportEnd: (result: { success: boolean; message?: string; details?: { time: number; sizeMB: number } }) => void;
     onExportStatus: (msg: string) => void;
+    formattingConfig: AppFormattingConfig;
 }
 
 export const ExecutionBar: React.FC<ExecutionBarProps> = ({
@@ -35,7 +37,8 @@ export const ExecutionBar: React.FC<ExecutionBarProps> = ({
     onCancelQuery,
     onExportStart,
     onExportEnd,
-    onExportStatus
+    onExportStatus,
+    formattingConfig
 }) => {
     return (
         <div style={{ marginBottom: '20px', display: 'flex', gap: '10px', alignItems: 'center' }}>
@@ -86,6 +89,7 @@ export const ExecutionBar: React.FC<ExecutionBarProps> = ({
                 onExportStart={onExportStart}
                 onExportEnd={onExportEnd}
                 onExportStatus={onExportStatus}
+                formattingConfig={formattingConfig}
             />
         </div>
     );

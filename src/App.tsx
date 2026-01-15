@@ -16,7 +16,7 @@ import { ExecutionBar } from './components/controls/ExecutionBar';
 import { StatusMessage } from './components/feedback/StatusMessage';
 import type { QueryState } from './types';
 import { format } from 'sql-formatter';
-import { setConfig, type AppFormattingConfig } from './lib/formatting';
+import { setConfig, DEFAULT_CONFIG, type AppFormattingConfig } from './lib/formatting';
 
 function App() {
   // Theme Hook
@@ -40,6 +40,27 @@ function App() {
   const [generatedSql, setGeneratedSql] = useState<string>('');
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
 
+  // Locale State
+  const [uiLocale, setUiLocale] = useState<string>('system');
+  const [loadedConfig, setLoadedConfig] = useState<AppFormattingConfig | null>(null);
+
+  // Update Config when UI Locale changes
+  useEffect(() => {
+    if (!loadedConfig) return; // Wait for load
+
+    // Priority: UI (if not system) > Config > Browser
+    const newLocale = uiLocale === 'system'
+      ? (loadedConfig.locale || navigator.language)
+      : uiLocale;
+
+    console.log(`Switching locale to: ${newLocale} (UI: ${uiLocale})`);
+
+    setConfig({
+      ...loadedConfig,
+      locale: newLocale
+    });
+  }, [uiLocale, loadedConfig]);
+
   // Warmup Logic
   const { warmingUp, warmingUpTime } = useDuckDBWarmup(db, activeDataset);
 
@@ -56,10 +77,21 @@ function App() {
     fetch(`${import.meta.env.BASE_URL}metadata/config.json`)
       .then(res => res.json())
       .then((config: AppFormattingConfig) => {
-        console.log('Loaded config:', config);
-        setConfig(config);
+        console.log(`Loaded config base:`, config);
+        // We do NOT call setConfig here directly, we let the effect below handle it
+        // based on the initial uiLocale state ('system').
+        // However, if config has strict locale, we might want to respect it as 'system' reference.
+        setLoadedConfig(config);
       })
-      .catch(err => console.warn('Failed to load config, using defaults', err));
+      .catch(err => {
+        console.warn('Failed to load config, using defaults', err);
+        // Set an empty/default config so the effect still runs
+        setLoadedConfig({
+          locale: navigator.language,
+          currency: 'BRL',
+          csv: { separator: ';', encoding: 'UTF-8' }
+        });
+      });
   }, []);
 
   // Reset local state when dataset changes
@@ -149,22 +181,71 @@ function App() {
 
   const measureFilterOptions = activeDataset?.semantic?.measures || [];
 
+  // Calculate Config
+  const currentLocale = uiLocale === 'system' ? (loadedConfig?.locale || navigator.language) : uiLocale;
+
+  // Find locale definition in registry
+  const localeDef = loadedConfig?.locales?.find(l =>
+    l.code === currentLocale ||
+    (currentLocale.includes('-') && l.code === currentLocale) || // exact match
+    l.code.startsWith(currentLocale.split('-')[0]) // lazy match pt-BR matches pt
+  );
+
+  const effectiveConfig: AppFormattingConfig = {
+    ...DEFAULT_CONFIG,
+    ...(loadedConfig || {}), // Global overrides
+    ...(localeDef || {}),    // Locale-specific overrides (currency, csv)
+    locale: currentLocale    // Ensure effective locale is current
+  };
+
+  // Debug export config
+  console.log(`Effective Config for ${currentLocale}:`, effectiveConfig);
+
   return (
     <div style={{ padding: '20px', fontFamily: 'sans-serif' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <h1>DuckDB WASM - Refatorado</h1>
+        <h1 style={{ margin: 0, fontSize: '1.5rem', color: 'var(--text-main)' }}>DuckDB WASM</h1>
 
-        {/* Theme Toggle */}
-        <select
-          value={theme}
-          onChange={(e) => setTheme(e.target.value as any)}
-          style={{ padding: '5px', borderRadius: '4px', cursor: 'pointer' }}
-          aria-label="Selecionar tema"
-        >
-          <option value="system">Sistema</option>
-          <option value="light">Claro</option>
-          <option value="dark">Escuro</option>
-        </select>
+        <div style={{ display: 'flex', gap: '10px' }}>
+          {/* Locale Selector */}
+          <select
+            value={uiLocale}
+            onChange={(e) => setUiLocale(e.target.value)}
+            style={{
+              padding: '5px',
+              borderRadius: '4px',
+              cursor: 'pointer',
+              background: 'var(--bg-input)',
+              color: 'var(--text-main)',
+              border: '1px solid var(--border-color)'
+            }}
+            aria-label="Selecionar idioma"
+          >
+            <option value="system">Sistema ({navigator.language})</option>
+            <option value="pt-BR">Português (BR)</option>
+            <option value="en-US">English (US)</option>
+            <option value="es-ES">Español</option>
+          </select>
+
+          {/* Theme Toggle */}
+          <select
+            value={theme}
+            onChange={(e) => setTheme(e.target.value as any)}
+            style={{
+              padding: '5px',
+              borderRadius: '4px',
+              cursor: 'pointer',
+              background: 'var(--bg-input)',
+              color: 'var(--text-main)',
+              border: '1px solid var(--border-color)'
+            }}
+            aria-label="Selecionar tema"
+          >
+            <option value="system">Tema: Sistema</option>
+            <option value="light">Claro</option>
+            <option value="dark">Escuro</option>
+          </select>
+        </div>
       </div>
 
       <StatusBar dbStatus={dbStatus} version={version} />
@@ -254,6 +335,7 @@ function App() {
             onExportStart={handleExportStart}
             onExportEnd={handleExportEnd}
             onExportStatus={setExportStatusMessage}
+            formattingConfig={effectiveConfig}
           />
 
           {/* Status Message Display */}
@@ -281,6 +363,7 @@ function App() {
             result={result}
             resultMode={resultMode}
             activeDataset={activeDataset}
+            formattingConfig={effectiveConfig}
           />
         </>
       )}

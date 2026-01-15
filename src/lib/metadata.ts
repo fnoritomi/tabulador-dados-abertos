@@ -6,12 +6,22 @@ export interface DatasetIndexItem {
 
 export type DataType = 'VARCHAR' | 'INTEGER' | 'FLOAT' | 'DATE' | 'TIMESTAMP' | 'BOOLEAN';
 
+export interface FormatOptions {
+    type?: 'number' | 'currency' | 'percent' | 'date' | 'datetime';
+    decimals?: number;
+    currency?: string; // e.g. 'BRL'
+    locale?: string;   // e.g. 'pt-BR'
+    pattern?: string;  // e.g. 'dd/MM/yyyy'
+    useThousandsSeparator?: boolean;
+}
+
 export interface Attribute {
     name: string;
     type: DataType;
     label: string;
     sql: string;
     description?: string;
+    format?: FormatOptions;
 }
 
 export interface Dimension {
@@ -23,6 +33,7 @@ export interface Dimension {
     // Simple Dimension (Leaf) properties
     dataType?: DataType;
     sql?: string;
+    format?: FormatOptions;
 
     // Composite Dimension (Node) properties
     attributes?: Attribute[];
@@ -44,7 +55,8 @@ export interface Measure {
     name: string;
     sql: string;
     label?: string;
-    display_decimals?: number;
+    display_decimals?: number; // @deprecated use format.decimals
+    format?: FormatOptions;
     non_additive_dimension?: NonAdditiveDimension;
 }
 

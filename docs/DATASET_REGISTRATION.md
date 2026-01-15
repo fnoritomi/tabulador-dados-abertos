@@ -105,7 +105,7 @@ As medidas definem como os dados são agregados.
     "name": "total_vendas",
     "label": "Total de Vendas",
     "sql": "SUM(VLR_VENDA)",
-    "display_decimals": 2
+    "format": { "type": "number", "decimals": 2 }
 }
 ```
 
@@ -138,8 +138,76 @@ Para medidas que não podem ser somadas em todas as dimensões (ex: Estoque, Sal
 ```
 
 **Nota sobre `window_groupings`**:
-- Se `all_additive_used: true`, o sistema particiona a janela por TODAS as dimensões selecionadas pelo usuário, exceto a dimensão não-aditiva (`COMPETENCIA`). Isso garante que o cálculo de "Último Valor" respeite o agrupamento visualizado.
-- Se `dimensions` for fornecido, a janela será particionada fixamente por essas colunas, independentemente do que o usuário selecionou. Útil quando o saldo é calculado em um grão fixo.
+- Se `all_additive_used: true`, o sistema particiona a janela por TODAS as dimensões selecionadas pelo usuário, exceto a dimensão não-aditiva (`COMPETENCIA`). Isso garante que o cálculo de "Último Valor" respeite o agrupamento visualizado.- Se `dimensions` for fornecido, a janela será particionada fixamente por essas colunas, independentemente do que o usuário selecionou. Útil quando o saldo é calculado em um grão fixo.
+
+## Formatação de Dados
+
+É possível definir regras de formatação específicas para Medidas, Dimensões Simples e Atributos usando a propriedade opcional `format`.
+
+As opções disponíveis são:
+- `type`: Tipo de formatação (`number`, `currency`, `percent`, `date`, `datetime`).
+- `decimals`: Número de casas decimais (para tipos numéricos).
+- `currency`: Código da moeda (ex: `BRL`, `USD`) - padrão `BRL`.
+- `locale`: Localidade para formatação (ex: `pt-BR`, `en-US`) - padrão: configuração do navegador ou `config.json`.
+- `useThousandsSeparator`: Se deve usar separador de milhar (ex: `1.000` vs `1000`) - padrão `true`.
+- `pattern`: Padrão de formatação para datas (ex: `dd/MM/yyyy HH:mm`).
+
+### Exemplos de Formatação
+
+#### 1. Moeda (R$)
+```json
+{
+    "name": "valor_venda",
+    "label": "Valor Venda",
+    "sql": "SUM(VLR_VENDA)",
+    "format": {
+        "type": "currency",
+        "currency": "BRL"
+    }
+}
+```
+
+#### 2. Número Inteiro (sem decimais e sem separador)
+Útil para códigos numéricos ou IDs.
+```json
+{
+    "name": "id_pedido",
+    "label": "ID Pedido",
+    "sql": "ID_PEDIDO",
+    "format": {
+        "type": "number",
+        "decimals": 0,
+        "useThousandsSeparator": false
+    }
+}
+```
+
+#### 3. Porcentagem
+Multiplica por 100 e adiciona o símbolo %.
+```json
+{
+    "name": "margem_lucro",
+    "label": "Margem de Lucro",
+    "sql": "AVG(MARGEM)",
+    "format": {
+        "type": "percent",
+        "decimals": 1
+    }
+}
+```
+
+#### 4. Data Customizada
+```json
+{
+    "name": "data_hora",
+    "label": "Data/Hora",
+    "sql": "DT_REGISTRO",
+    "format": {
+        "type": "datetime",
+        "pattern": "dd/MM/yyyy HH:mm"
+    }
+}
+```
 
 ## Validação
 

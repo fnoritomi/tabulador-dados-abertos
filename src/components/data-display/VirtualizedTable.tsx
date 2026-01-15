@@ -91,7 +91,7 @@ const VirtualizedTable: React.FC<VirtualizedTableProps> = ({
                     const colType = columnTypes[col] || 'OTHER';
                     const override = getColumnOverride ? getColumnOverride(col) : undefined;
 
-                    const displayVal = formatValue(val, colType as any, DEFAULT_CONFIG, override);
+                    const displayVal = formatValue(val, colType as any, formattingConfig ?? DEFAULT_CONFIG, override);
 
                     return (
                         <td key={col} style={{

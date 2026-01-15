@@ -53,8 +53,9 @@ export const buildSql = (
             if (activeDataset.semantic) {
                 const semDef = MetadataService.findDimensionOrAttribute(activeDataset, f.column);
                 if (semDef) {
-                    // Check if it's an Attribute (has sql property)
-                    if ('sql' in semDef) {
+                    // Check if it's an Attribute or Simple Dimension (has sql property)
+                    // Use 'in' check + truthy check to satisfy TS for optional sql
+                    if ('sql' in semDef && semDef.sql) {
                         sqlCol = semDef.sql;
                         // Use strict type from Attribute (type) or Simple Dimension (dataType)
                         const typeToCheck = (semDef as any).dataType || semDef.type;

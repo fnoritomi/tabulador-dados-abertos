@@ -1,74 +1,68 @@
 import { describe, it, expect } from 'vitest';
-import { formatDate, formatTimestamp, formatInteger, formatFloat, DEFAULT_CONFIG } from './formatting';
+import { formatValue } from './formatting';
 import type { AppFormattingConfig } from './formatting';
 
-describe('Formatting Utils', () => {
-    const customConfig: AppFormattingConfig = {
-        date: { order: 'MDY', separator: '-' },
-        timestamp: { order: 'YMD', dateSeparator: '.', timeSeparator: '-', dateTimeSeparator: 'T' },
-        number: { thousandSeparator: ',', decimalSeparator: '.' },
+describe('Formatting Utils (Intl)', () => {
+    // pt-BR Config
+    const ptConfig: AppFormattingConfig = {
+        locale: 'pt-BR',
+        currency: 'BRL',
+        csv: { separator: ';', encoding: 'Windows-1252' }
+    };
+
+    // en-US Config
+    const enConfig: AppFormattingConfig = {
+        locale: 'en-US',
+        currency: 'USD',
         csv: { separator: ',', encoding: 'UTF-8' }
     };
 
-    describe('formatDate', () => {
-        it('should format date using default config (DMY /)', () => {
-            // 2023-01-25. Use UTC to ensure consistency
+    describe('DATE Formatting', () => {
+        it('should format date for pt-BR (dd/mm/yyyy)', () => {
+            const date = new Date(Date.UTC(2023, 0, 25)); // Jan 25 2023
+            // Note: unexpected space varies by node version sometimes, but regex helps or standard check
+            // pt-BR dateStyle: 'short' -> 25/01/2023
+            expect(formatValue(date, 'DATE', ptConfig)).toMatch(/25\/01\/2023/);
+        });
+
+        it('should format date for en-US (m/d/yy)', () => {
             const date = new Date(Date.UTC(2023, 0, 25));
-            expect(formatDate(date, DEFAULT_CONFIG)).toBe('25/01/2023');
-        });
-
-        it('should format date using custom config (MDY -)', () => {
-            const date = new Date(Date.UTC(2023, 0, 25));
-            expect(formatDate(date, customConfig)).toBe('01-25-2023');
-        });
-
-        it('should handle string input', () => {
-            expect(formatDate('2023-12-31', DEFAULT_CONFIG)).toBe('31/12/2023');
+            // en-US dateStyle: 'short' -> 1/25/23
+            expect(formatValue(date, 'DATE', enConfig)).toMatch(/1\/25\/23/);
         });
     });
 
-    describe('formatTimestamp', () => {
-        it('should format timestamp using default config', () => {
-            const date = new Date(Date.UTC(2023, 11, 25, 14, 30, 0)); // 25 Dec 2023 14:30:00 UTC
-            expect(formatTimestamp(date, DEFAULT_CONFIG)).toBe('25/12/2023 14:30:00');
+    describe('NUMBER Formatting', () => {
+        it('should format integer for pt-BR (1.000)', () => {
+            expect(formatValue(1234, 'INTEGER', ptConfig)).toBe('1.234');
         });
 
-        it('should format timestamp using custom config', () => {
-            const date = new Date(Date.UTC(2023, 11, 25, 14, 30, 45));
-            expect(formatTimestamp(date, customConfig)).toBe('2023.12.25T14-30-45');
-        });
-    });
-
-    describe('formatInteger', () => {
-        it('should format integer with default thousand separator (.)', () => {
-            expect(formatInteger(1234567, DEFAULT_CONFIG)).toBe('1.234.567');
+        it('should format integer for en-US (1,000)', () => {
+            expect(formatValue(1234, 'INTEGER', enConfig)).toBe('1,234');
         });
 
-        it('should format integer with custom thousand separator (,)', () => {
-            expect(formatInteger(1234567, customConfig)).toBe('1,234,567');
+        it('should format float for pt-BR (1.234,56)', () => {
+            expect(formatValue(1234.56, 'FLOAT', ptConfig)).toBe('1.234,56');
         });
 
-        it('should handle negative numbers', () => {
-            expect(formatInteger(-1000, DEFAULT_CONFIG)).toBe('-1.000');
+        it('should format float for en-US (1,234.56)', () => {
+            expect(formatValue(1234.56, 'FLOAT', enConfig)).toBe('1,234.56');
+        });
+
+        it('should format currency for pt-BR', () => {
+            // Note: non-breaking space issues common in currency testing
+            const result = formatValue(10, 'FLOAT', ptConfig, { type: 'currency' });
+            expect(result.replace(/\s/g, ' ')).toContain('R$ 10,00');
         });
     });
 
-    describe('formatFloat', () => {
-        it('should format float with default separators', () => {
-            expect(formatFloat(1234.56, DEFAULT_CONFIG)).toBe('1.234,56');
+    describe('Overrides', () => {
+        it('should respect decimals override', () => {
+            expect(formatValue(1234.5678, 'FLOAT', ptConfig, { decimals: 1 })).toBe('1.234,6');
         });
 
-        it('should format float with custom separators', () => {
-            expect(formatFloat(1234.56, customConfig)).toBe('1,234.56');
-        });
-
-        it('should respect decimal places override', () => {
-            expect(formatFloat(1234.5678, DEFAULT_CONFIG, 2)).toBe('1.234,57'); // rounded
-            expect(formatFloat(1234.5, DEFAULT_CONFIG, 2)).toBe('1.234,50'); // padded
-        });
-
-        it('should handle zero decimals', () => {
-            expect(formatFloat(1234.9, DEFAULT_CONFIG, 0)).toBe('1.235');
+        it('should respect useThousandsSeparator: false', () => {
+            expect(formatValue(1234.56, 'FLOAT', ptConfig, { useThousandsSeparator: false })).toBe('1234,56');
         });
     });
 });

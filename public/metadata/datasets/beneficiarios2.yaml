@@ -1,0 +1,56 @@
+version: 1
+datasets:
+  - name: beneficiarios2
+    description: Beneficiários de Planos de Saúde 2
+    sources:
+      - data/beneficiarios2/COMPETENCIA=2022-01-01/data_0.parquet
+      - data/beneficiarios2/COMPETENCIA=2022-02-01/data_0.parquet
+      - data/beneficiarios2/COMPETENCIA=2022-03-01/data_0.parquet
+      - data/beneficiarios2/COMPETENCIA=2022-04-01/data_0.parquet
+      - data/beneficiarios2/COMPETENCIA=2022-05-01/data_0.parquet
+      - data/beneficiarios2/COMPETENCIA=2022-06-01/data_0.parquet
+      - data/beneficiarios2/COMPETENCIA=2022-07-01/data_0.parquet
+      - data/beneficiarios2/COMPETENCIA=2022-08-01/data_0.parquet
+      - data/beneficiarios2/COMPETENCIA=2022-09-01/data_0.parquet
+      - data/beneficiarios2/COMPETENCIA=2022-10-01/data_0.parquet
+      - data/beneficiarios2/COMPETENCIA=2022-11-01/data_0.parquet
+      - data/beneficiarios2/COMPETENCIA=2022-12-01/data_0.parquet
+    columns:
+      - name: COMPETENCIA
+        type: date
+      - name: CD_OPERADORA
+        type: string
+      - name: NM_RAZAO_SOCIAL
+        type: string
+      - name: MODALIDADE_OPERADORA
+        type: string
+      - name: SG_UF
+        type: string
+      - name: CD_MUNICIPIO
+        type: string
+      - name: NM_MUNICIPIO
+        type: string
+      - name: TP_SEXO
+        type: string
+      - name: DE_FAIXA_ETARIA
+        type: string
+      - name: DE_FAIXA_ETARIA_REAJ
+        type: string
+      - name: TP_VIGENCIA_PLANO
+        type: string
+      - name: DE_CONTRATACAO_PLANO
+        type: string
+      - name: DE_SEGMENTACAO_PLANO
+        type: string
+      - name: DE_ABRG_GEOGRAFICA_PLANO
+        type: string
+      - name: COBERTURA_ASSIST_PLAN
+        type: string
+      - name: TIPO_VINCULO
+        type: string
+      - name: QT_ATIVOS
+        type: integer
+      - name: QT_ADESOES
+        type: integer
+      - name: QT_CANCELAMENTOS
+        type: integer

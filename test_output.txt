@@ -1,0 +1,83 @@
+
+[1m[46m RUN [49m[22m [36mv4.0.17 [39m[90mC:/Users/norit/Documents/projetos/tabulador-dados-abertos[39m
+
+ [31mÔØ»[39m test/semantic/GranularFilter.test.ts [2m([22m[2m5 tests[22m[2m | [22m[31m5 failed[39m[2m)[22m[32m 17[2mms[22m[39m
+[31m     [31m├ù[31m should generate range for Year equality[39m[32m 10[2mms[22m[39m
+[31m     [31m├ù[31m should generate range for Month equality[39m[32m 1[2mms[22m[39m
+[31m     [31m├ù[31m should generate range for Quarter equality[39m[32m 1[2mms[22m[39m
+[31m     [31m├ù[31m should handle Greater Than Year[39m[32m 1[2mms[22m[39m
+[31m     [31m├ù[31m should handle Less Than or Equal Month[39m[32m 1[2mms[22m[39m
+
+ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ» Failed Tests 5 ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»
+
+ FAIL  test/semantic/GranularFilter.test.ts > DuckDbSqlBuilder - Granular Filters > should generate range for Year equality
+Error: Semantic Model test_model not found
+ ÔØ» DuckDbSqlBuilder.build src/semantic/sql_builder_duckdb.ts:24:19
+     22|         if (!model) {
+     23|             // Fallback for compatibility if mode not set (or if semanÔÇª
+     24|             throw new Error(`Semantic Model ${query.semanticModel} notÔÇª
+       |                   ^
+     25|         }
+     26| 
+ ÔØ» test/semantic/GranularFilter.test.ts:45:29
+
+ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»[1/5]ÔÄ»
+
+ FAIL  test/semantic/GranularFilter.test.ts > DuckDbSqlBuilder - Granular Filters > should generate range for Month equality
+Error: Semantic Model test_model not found
+ ÔØ» DuckDbSqlBuilder.build src/semantic/sql_builder_duckdb.ts:24:19
+     22|         if (!model) {
+     23|             // Fallback for compatibility if mode not set (or if semanÔÇª
+     24|             throw new Error(`Semantic Model ${query.semanticModel} notÔÇª
+       |                   ^
+     25|         }
+     26| 
+ ÔØ» test/semantic/GranularFilter.test.ts:65:29
+
+ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»[2/5]ÔÄ»
+
+ FAIL  test/semantic/GranularFilter.test.ts > DuckDbSqlBuilder - Granular Filters > should generate range for Quarter equality
+Error: Semantic Model test_model not found
+ ÔØ» DuckDbSqlBuilder.build src/semantic/sql_builder_duckdb.ts:24:19
+     22|         if (!model) {
+     23|             // Fallback for compatibility if mode not set (or if semanÔÇª
+     24|             throw new Error(`Semantic Model ${query.semanticModel} notÔÇª
+       |                   ^
+     25|         }
+     26| 
+ ÔØ» test/semantic/GranularFilter.test.ts:86:29
+
+ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»[3/5]ÔÄ»
+
+ FAIL  test/semantic/GranularFilter.test.ts > DuckDbSqlBuilder - Granular Filters > should handle Greater Than Year
+Error: Semantic Model test_model not found
+ ÔØ» DuckDbSqlBuilder.build src/semantic/sql_builder_duckdb.ts:24:19
+     22|         if (!model) {
+     23|             // Fallback for compatibility if mode not set (or if semanÔÇª
+     24|             throw new Error(`Semantic Model ${query.semanticModel} notÔÇª
+       |                   ^
+     25|         }
+     26| 
+ ÔØ» test/semantic/GranularFilter.test.ts:106:29
+
+ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»[4/5]ÔÄ»
+
+ FAIL  test/semantic/GranularFilter.test.ts > DuckDbSqlBuilder - Granular Filters > should handle Less Than or Equal Month
+Error: Semantic Model test_model not found
+ ÔØ» DuckDbSqlBuilder.build src/semantic/sql_builder_duckdb.ts:24:19
+     22|         if (!model) {
+     23|             // Fallback for compatibility if mode not set (or if semanÔÇª
+     24|             throw new Error(`Semantic Model ${query.semanticModel} notÔÇª
+       |                   ^
+     25|         }
+     26| 
+ ÔØ» test/semantic/GranularFilter.test.ts:126:29
+
+ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»[5/5]ÔÄ»
+
+
+[2m Test Files [22m [1m[31m1 failed[39m[22m[90m (1)[39m
+[2m      Tests [22m [1m[31m5 failed[39m[22m[90m (5)[39m
+[2m   Start at [22m 16:36:05
+[2m   Duration [22m 2.22s[2m (transform 174ms, setup 0ms, import 316ms, tests 17ms, environment 1.57s)[22m
+

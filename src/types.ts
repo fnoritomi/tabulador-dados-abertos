@@ -3,6 +3,7 @@ export interface Filter {
     column: string;
     operator: string;
     value: string;
+    granularity?: string;
 }
 
 export type QueryMode = 'dataset' | 'semantic';

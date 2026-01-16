@@ -64,16 +64,18 @@ export function useAppQueryState() {
         });
     }, []);
 
-    const addFilter = useCallback((input: string | { column: string, operator: string, value: string }, type: 'dimension' | 'measure' = 'dimension') => {
+    const addFilter = useCallback((input: string | { column: string, operator: string, value: string, granularity?: string }, type: 'dimension' | 'measure' = 'dimension') => {
         const column = typeof input === 'object' ? input.column : input;
         const operator = typeof input === 'object' ? input.operator : (type === 'measure' ? '>' : '=');
         const value = typeof input === 'object' ? input.value : '';
+        const granularity = (typeof input === 'object' && 'granularity' in input) ? (input as any).granularity : undefined;
 
         const newFilter: Filter = {
             id: Date.now(),
             column,
             operator,
-            value
+            value,
+            granularity
         };
 
         if (type === 'measure') {

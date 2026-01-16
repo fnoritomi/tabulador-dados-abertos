@@ -41,6 +41,14 @@ export class SemanticRegistry {
 
     // ... (rest of methods)
 
+    registerModel(model: SemanticModel) {
+        this.models.set(model.name, model);
+    }
+
+    registerDataset(dataset: Dataset) {
+        this.datasets.set(dataset.name, dataset);
+    }
+
     getConfig(): SystemConfig {
         return this.config;
     }

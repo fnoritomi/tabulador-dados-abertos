@@ -151,6 +151,7 @@ export interface FilterCnd {
     field: string;
     operator: '=' | '!=' | '>' | '>=' | '<' | '<=' | 'IN' | 'LIKE';
     value: any;
+    granularity?: TimeGranularity;
 }
 
 export interface OrderBy {

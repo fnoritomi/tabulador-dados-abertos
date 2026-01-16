@@ -214,8 +214,8 @@ function App() {
       columns: qs.selectedColumns,
       dimensions: qs.selectedDimensions,
       measures: qs.selectedMeasures,
-      filters: qs.filters.map(f => ({ field: f.column, operator: f.operator as any, value: f.value })),
-      measureFilters: qs.measureFilters.map(f => ({ field: f.column, operator: f.operator as any, value: f.value })),
+      filters: qs.filters.map(f => ({ field: f.column, operator: f.operator as any, value: f.value, granularity: f.granularity as any })),
+      measureFilters: qs.measureFilters.map(f => ({ field: f.column, operator: f.operator as any, value: f.value, granularity: f.granularity as any })),
       limit: qs.limit
     };
   }, [activeDatasetAdapter, qs, selectedModelId]);
@@ -250,7 +250,7 @@ function App() {
   }, [activeDatasetAdapter, queryIR]);
 
   // Filter Handlers
-  const handleAddFilter = (filter?: { column: string, operator: string, value: string }) => {
+  const handleAddFilter = (filter?: { column: string, operator: string, value: string, granularity?: string }) => {
     if (!activeDatasetAdapter) return;
     if (filter) {
       qa.addFilter(filter, 'dimension');
@@ -316,11 +316,25 @@ function App() {
   // Options
   const filterOptions = activeDatasetAdapter ? (
     activeDatasetAdapter.semantic
-      ? activeDatasetAdapter.semantic.dimensions // Already flat enough for simple usage, or flattened by adapter?
-      : activeDatasetAdapter.schema
+      ? activeDatasetAdapter.semantic.dimensions.map((d: any) => ({
+        name: d.name,
+        label: d.label,
+        groupLabel: d.group,
+        type: d.type || d.dataType || 'VARCHAR', // Pass type
+        granularities: d.type_params?.available_granularities
+      }))
+      : activeDatasetAdapter.schema.map((c: any) => ({
+        name: c.name,
+        label: c.name,
+        type: c.type // Pass schema type
+      }))
   ) : [];
 
-  const measureFilterOptions = activeDatasetAdapter?.semantic?.measures || [];
+  const measureFilterOptions = activeDatasetAdapter?.semantic?.measures.map((m: any) => ({
+    name: m.name,
+    label: m.label,
+    type: 'FLOAT' // Measures are almost always numbers
+  })) || [];
 
   // Calculate Config
   const currentLocale = uiLocale === 'system' ? (loadedConfig?.locale || navigator.language) : uiLocale;
@@ -520,6 +534,7 @@ function App() {
                       type="dimension"
                       color="var(--text-main)"
                       bgColor="var(--bg-app)"
+                      locale={effectiveConfig.locale}
                     />
 
                     {activeDatasetAdapter.semantic && (
@@ -533,6 +548,7 @@ function App() {
                         type="measure"
                         color="var(--text-main)"
                         bgColor="var(--bg-app)"
+                        locale={effectiveConfig.locale}
                       />
                     )}
 

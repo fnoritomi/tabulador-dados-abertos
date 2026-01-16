@@ -446,6 +446,71 @@ ${whereClause}
         return `WHERE ${conditions.join(' AND ')}`;
     }
 
+    private buildGranularCondition(fieldExpr: string, operator: string, value: string, granularity: string): string {
+        // Parse Value
+        // Expected formats: YYYY (Year), YYYY-MM (Month/Quarter), YYYY-MM-DD (Day)
+        const parts = value.split('-').map(Number);
+        const year = parts[0];
+
+        let startDate: string = '';
+        let nextStart: string = '';
+
+        if (granularity === 'year') {
+            startDate = `${year}-01-01`;
+            nextStart = `${year + 1}-01-01`;
+        } else if (granularity === 'quarter') {
+            const startMonth = parts[1];
+            let nextMonthVal = startMonth + 3;
+            let nextYear = year;
+
+            if (nextMonthVal > 12) {
+                nextMonthVal = 1;
+                nextYear = year + 1;
+            }
+
+            const startMonthStr = String(startMonth).padStart(2, '0');
+            const nextMonthStr = String(nextMonthVal).padStart(2, '0');
+
+            startDate = `${year}-${startMonthStr}-01`;
+            nextStart = `${nextYear}-${nextMonthStr}-01`;
+
+        } else if (granularity === 'month') {
+            const month = parts[1];
+            let nextMonthVal = month + 1;
+            let nextYear = year;
+
+            if (nextMonthVal > 12) {
+                nextMonthVal = 1;
+                nextYear = year + 1;
+            }
+
+            const monthStr = String(month).padStart(2, '0');
+            const nextMonthStr = String(nextMonthVal).padStart(2, '0');
+
+            startDate = `${year}-${monthStr}-01`;
+            nextStart = `${nextYear}-${nextMonthStr}-01`;
+        } else {
+            // Day or fallback
+            return `${fieldExpr} ${operator} '${value}'`;
+        }
+
+        if (operator === '=') {
+            return `(${fieldExpr} >= '${startDate}' AND ${fieldExpr} < '${nextStart}')`;
+        } else if (operator === '!=') {
+            return `(${fieldExpr} < '${startDate}' OR ${fieldExpr} >= '${nextStart}')`;
+        } else if (operator === '>') {
+            return `${fieldExpr} >= '${nextStart}'`;
+        } else if (operator === '>=') {
+            return `${fieldExpr} >= '${startDate}'`;
+        } else if (operator === '<') {
+            return `${fieldExpr} < '${startDate}'`;
+        } else if (operator === '<=') {
+            return `${fieldExpr} < '${nextStart}'`;
+        }
+
+        return `${fieldExpr} ${operator} '${value}'`;
+    }
+
     private buildHaving(filters?: FilterCnd[]): string {
         if (!filters || filters.length === 0) return '';
         const conditions = this.buildConditions(filters);
@@ -483,6 +548,12 @@ ${whereClause}
             }
 
             let val = f.value;
+
+            // Granularity Handling
+            if (f.granularity && f.granularity !== 'day' && typeof val === 'string') {
+                return this.buildGranularCondition(fieldExpr, f.operator, val, f.granularity);
+            }
+
             if (typeof val === 'string') {
                 val = `'${val.replace(/'/g, "''")}'`;
             }
@@ -554,6 +625,12 @@ ${limitClause}`;
 
         const conditions = filters ? filters.map(f => {
             let val = f.value;
+
+            // Raw Granularity Handling (Assume raw columns are quoted fields)
+            if (f.granularity && f.granularity !== 'day' && typeof val === 'string') {
+                return this.buildGranularCondition(`"${f.field}"`, f.operator, val, f.granularity);
+            }
+
             if (typeof val === 'string') {
                 val = `'${val.replace(/'/g, "''")}'`;
             }

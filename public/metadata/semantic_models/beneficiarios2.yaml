@@ -1,0 +1,181 @@
+version: 1
+semantic_models:
+  - name: beneficiarios
+    description: Cubo Beneficiários 2 - hive partitioning
+    model: beneficiarios
+    high_cardinality:
+      enabled: true
+      target_per_bucket: 1000000  # Target rows/groups per bucket (default: 75000)
+      threshold: 1500000         # Threshold to trigger partitioning (default: 150000)
+      limit_target_multiplier: 10 # No caso de consultas com cláusula de limite de linhas, reduz o target_per_bucket para o valor do limit * limit_target_multiplier (default: 3)
+      limit_threshold_multiplier: 15 # Ajusta o threshold para particionamento baseado no limite (default: não utilizado, usa threshold fixo)
+    dimensions:
+      - name: competencia
+        type: time
+        expr: COMPETENCIA
+        label: "Competência"
+        description: "Mês de referência"
+        is_partition: true
+        group: "Tempo"
+        type_params:
+          time_granularity: month
+          available_granularities: [month, year, quarter]
+
+      - name: ano_competencia
+        type: numerical
+        expr: year(COMPETENCIA)
+        label: "Ano"
+        group: "Tempo"
+        format:
+          number:
+            use_grouping: false
+
+      - name: cd_operadora
+        expr: CD_OPERADORA
+        type: categorical
+        label: Código Operadora
+        group: "Operadora"
+
+      - name: razao_social
+        expr: NM_RAZAO_SOCIAL
+        type: categorical
+        label: Razão Social
+        group: "Operadora"
+
+      - name: modalidade
+        expr: MODALIDADE_OPERADORA
+        type: categorical
+        label: Modalidade Operadora
+        group: "Operadora"
+
+      - name: vigencia_plano
+        expr: TP_VIGENCIA_PLANO
+        type: categorical
+        label: Tipo Vigência Plano
+        group: "Plano"
+        
+      - name: contratacao_plano
+        expr: DE_CONTRATACAO_PLANO
+        type: categorical
+        label: Tipo Contratação
+        group: "Plano"
+
+      - name: segmentacao_plano
+        expr: DE_SEGMENTACAO_PLANO
+        type: categorical
+        label: Segmentação Assistencial
+        group: "Plano"
+
+      - name: abrangencia_geografica
+        expr: DE_ABRG_GEOGRAFICA_PLANO
+        type: categorical
+        label: Abrangência Geográfica
+        group: "Plano"
+
+      - name: cobertura_assistencia
+        expr: COBERTURA_ASSIST_PLAN
+        type: categorical
+        label: Cobertura Assistência
+        group: "Plano"
+
+      - name: tipo_vinculo
+        expr: TIPO_VINCULO
+        type: categorical
+        label: Tipo Vínculo
+        group: "Vínculo"
+
+      - name: sg_uf
+        type: categorical
+        expr: SG_UF
+        label: UF
+        group: "Residência do beneficiário"
+
+      - name: cd_municipio
+        expr: CD_MUNICIPIO
+        type: categorical
+        label: Código Município
+        group: "Residência do beneficiário"
+
+      - name: nm_municipio
+        type: categorical
+        expr: NM_MUNICIPIO
+        label: "Município"
+        group: "Residência do beneficiário"
+
+      - name: sexo
+        type: categorical
+        expr: TP_SEXO
+        label: "Sexo"
+        group: "Beneficiário"
+
+      - name: faixa_etaria
+        type: categorical
+        expr: DE_FAIXA_ETARIA
+        label: "Faixa Etária"
+        group: "Beneficiário"
+
+      - name: faixa_etaria_reaj
+        expr: DE_FAIXA_ETARIA_REAJ
+        type: categorical
+        label: Faixa Etária Reajuste
+        group: "Beneficiário"
+
+    measures:
+      - name: qt_ativos
+        expr: QT_ATIVOS
+        type: sum
+        label: Qt Ativos
+        description: Soma de QT_ATIVOS
+        format:
+          style: decimal
+        non_additive_dimension:
+          name: competencia
+          window_choice: max
+          window_groupings: [] # Global default (max of selection): Qt Ativos
+
+      - name: qt_operadoras_distintas
+        label: Qt Operadoras
+        description: Quantidade de operadoras distintas
+        expr: CD_OPERADORA
+        type: count
+        agg_params:
+          distinct: true
+
+      - name: qt_ativos_feminino
+        label: Qt Ativos (Feminino)
+        description: Apenas beneficiários do sexo feminino (F)
+        expr: QT_ATIVOS
+        type: sum
+        agg_params:
+          where: "TP_SEXO = 'F'"
+        non_additive_dimension:
+          name: competencia
+          window_choice: max
+          window_groupings: [] # Global default (max of selection): Qt Ativos
+
+      - name: qt_adesoes
+        expr: QT_ADESOES
+        type: sum
+        label: Qt Adesões
+        format:
+          number:
+            use_grouping: true
+            decimals: 0
+
+      - name: qt_cancelamentos
+        expr: QT_CANCELAMENTOS
+        type: sum
+        label: Qt Cancelamentos
+        format:
+          number:
+            use_grouping: true
+            decimals: 0
+
+      - name: qt_linhas
+        expr: COUNT(*)
+        type: count
+        label: Qt Linhas
+        format:
+          number:
+            use_grouping: true
+            decimals: 0

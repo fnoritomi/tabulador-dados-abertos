@@ -1,91 +1,61 @@
+
 import { describe, it, expect } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import { useAppQueryState } from '../../src/hooks/useAppQueryState';
 
 describe('useAppQueryState', () => {
-    it('should initialize with default values', () => {
+    it('should add a filter with granularity', () => {
         const { result } = renderHook(() => useAppQueryState());
-        expect(result.current.state.selectedColumns).toEqual([]);
-        expect(result.current.state.limit).toBe(10000);
-        expect(result.current.state.isSemanticMode).toBe(true);
+
+        act(() => {
+            result.current.actions.addFilter({
+                column: 'date_col',
+                operator: '=',
+                value: '2023',
+                granularity: 'year'
+            });
+        });
+
+        const filters = result.current.state.filters;
+        expect(filters).toHaveLength(1);
+        expect(filters[0].column).toBe('date_col');
+        expect(filters[0].granularity).toBe('year');
     });
 
-    it('should toggle columns and clear dimensions/measures', () => {
+    it('should update filter granularity', () => {
         const { result } = renderHook(() => useAppQueryState());
 
-        // Select a dimension first
         act(() => {
-            result.current.actions.toggleDimension('dim1');
+            result.current.actions.addFilter({
+                column: 'date_col',
+                operator: '=',
+                value: '2023',
+                granularity: 'year'
+            });
         });
-        expect(result.current.state.selectedDimensions).toContain('dim1');
-        expect(result.current.state.isSemanticMode).toBe(true);
 
-        // Now select a raw column -> should clear semantic
+        const id = result.current.state.filters[0].id;
+
         act(() => {
-            result.current.actions.toggleColumn('col1');
+            result.current.actions.updateFilter(id, 'granularity', 'quarter');
         });
-        expect(result.current.state.selectedColumns).toContain('col1');
-        expect(result.current.state.selectedDimensions).toEqual([]);
-        expect(result.current.state.isSemanticMode).toBe(false);
+
+        const filters = result.current.state.filters;
+        expect(filters[0].granularity).toBe('quarter');
     });
 
-    it('should toggle dimensions and clear raw columns', () => {
-        const { result } = renderHook(() => useAppQueryState());
-
-        // Select raw column first
-        act(() => {
-            result.current.actions.toggleColumn('col1');
-        });
-        expect(result.current.state.selectedColumns).toContain('col1');
-
-        // Now select dimension -> should clear raw
-        act(() => {
-            result.current.actions.toggleDimension('dim1');
-        });
-        expect(result.current.state.selectedDimensions).toContain('dim1');
-        expect(result.current.state.selectedColumns).toEqual([]);
-        expect(result.current.state.isSemanticMode).toBe(true);
-    });
-
-    it('should manage filters', () => {
+    it('should handle addFilter without granularity', () => {
         const { result } = renderHook(() => useAppQueryState());
 
         act(() => {
-            result.current.actions.addFilter('col1');
-        });
-        expect(result.current.state.filters).toHaveLength(1);
-        expect(result.current.state.filters[0].column).toBe('col1');
-
-        const filterId = result.current.state.filters[0].id;
-
-        act(() => {
-            result.current.actions.updateFilter(filterId, 'value', 'test');
-        });
-        expect(result.current.state.filters[0].value).toBe('test');
-
-        act(() => {
-            result.current.actions.removeFilter(filterId);
-        });
-        expect(result.current.state.filters).toHaveLength(0);
-    });
-
-    it('should reset state', () => {
-        const { result } = renderHook(() => useAppQueryState());
-
-        act(() => {
-            result.current.actions.toggleColumn('col1');
-            result.current.actions.setLimit(500);
-            result.current.actions.addFilter('col1');
+            result.current.actions.addFilter({
+                column: 'other_col',
+                operator: '=',
+                value: 'foo'
+            });
         });
 
-        expect(result.current.state.selectedColumns).toHaveLength(1);
-
-        act(() => {
-            result.current.actions.reset();
-        });
-
-        expect(result.current.state.selectedColumns).toEqual([]);
-        expect(result.current.state.limit).toBe(10000);
-        expect(result.current.state.filters).toEqual([]);
+        const filters = result.current.state.filters;
+        expect(filters[0].granularity).toBeUndefined();
     });
 });

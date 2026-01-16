@@ -1,21 +1,31 @@
 import React, { useState } from 'react';
 import type { Filter } from '../../types';
 import { FilterModal } from '../modals/FilterModal';
+import { getFriendlyOperatorLabel, formatFilterValue } from '../../lib/filterUtils';
+
+export interface FilterOption {
+    name: string;
+    label?: string;
+    groupLabel?: string;
+    type?: string;
+    granularities?: string[];
+}
 
 interface FilterListProps {
     title: string;
     filters: Filter[];
-    options: { name: string; label?: string; groupLabel?: string }[];
-    onAdd: (filter?: { column: string, operator: string, value: string }) => void;
+    options: FilterOption[];
+    onAdd: (filter?: { column: string, operator: string, value: string, granularity?: string }) => void;
     onRemove: (id: number) => void;
     onUpdate: (id: number, field: keyof Filter, value: string) => void;
     type: 'dimension' | 'measure';
     color: string;
     bgColor: string;
+    locale: string;
 }
 
 export const FilterList: React.FC<FilterListProps> = ({
-    title, filters, options, onAdd, onRemove, onUpdate, type, color, bgColor
+    title, filters, options, onAdd, onRemove, onUpdate, type, color, bgColor, locale
 }) => {
     const [isExpanded, setIsExpanded] = useState(true);
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -38,7 +48,9 @@ export const FilterList: React.FC<FilterListProps> = ({
             // Update existing
             if (editingFilter.column !== filterData.column) onUpdate(editingFilter.id, 'column', filterData.column);
             if (editingFilter.operator !== filterData.operator) onUpdate(editingFilter.id, 'operator', filterData.operator);
+            if (editingFilter.operator !== filterData.operator) onUpdate(editingFilter.id, 'operator', filterData.operator);
             if (editingFilter.value !== filterData.value) onUpdate(editingFilter.id, 'value', filterData.value);
+            if (editingFilter.granularity !== filterData.granularity) onUpdate(editingFilter.id, 'granularity', filterData.granularity || 'day');
         } else {
             // Add new
             onAdd(filterData);
@@ -94,7 +106,13 @@ export const FilterList: React.FC<FilterListProps> = ({
                             border: '1px solid var(--border-color)'
                         }}>
                             <div style={{ fontSize: '0.9em', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                                <strong>{getLabel(filter.column)}</strong> <span style={{ color: 'var(--primary-color)' }}>{filter.operator}</span> {filter.value}
+                                <strong>{getLabel(filter.column)}</strong>
+                                {' '}
+                                <span style={{ color: 'var(--primary-color)' }}>
+                                    {getFriendlyOperatorLabel(filter.operator, options.find(o => o.name === filter.column)?.type)}
+                                </span>
+                                {' '}
+                                {formatFilterValue(filter.value, filter.granularity)}
                             </div>
 
                             <div style={{ display: 'flex', gap: '5px' }}>
@@ -153,6 +171,7 @@ export const FilterList: React.FC<FilterListProps> = ({
                 initialFilter={editingFilter}
                 options={options}
                 type={type}
+                locale={locale}
             />
         </div>
     );

@@ -7,7 +7,8 @@ semantic_models:
       enabled: true
       target_per_bucket: 1000000  # Target rows/groups per bucket (default: 75000)
       threshold: 2000000          # Threshold to trigger partitioning (default: 150000)
-      limit_multiplier: 10        # No caso de consultas com cláusula de limite de linhas, reduz o target_per_bucket para o valor do limit * limit_multiplier (default: 3)
+      limit_target_multiplier: 10 # No caso de consultas com cláusula de limite de linhas, reduz o target_per_bucket para o valor do limit * limit_target_multiplier (default: 3)
+      limit_threshold_multiplier: 20 # Ajusta o threshold para particionamento baseado no limite (default: não utilizado, usa threshold fixo)
     dimensions:
       - name: competencia
         type: time

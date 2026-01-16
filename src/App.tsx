@@ -250,17 +250,25 @@ function App() {
   }, [activeDatasetAdapter, queryIR]);
 
   // Filter Handlers
-  const handleAddFilter = () => {
+  const handleAddFilter = (filter?: { column: string, operator: string, value: string }) => {
     if (!activeDatasetAdapter) return;
-    // Default to first available dimension
-    const field = activeDatasetAdapter.semantic?.dimensions[0]?.name || activeDatasetAdapter.schema[0]?.name;
-    if (field) qa.addFilter(field, 'dimension');
+    if (filter) {
+      qa.addFilter(filter, 'dimension');
+    } else {
+      // Default to first available dimension
+      const field = activeDatasetAdapter.semantic?.dimensions[0]?.name || activeDatasetAdapter.schema[0]?.name;
+      if (field) qa.addFilter(field, 'dimension');
+    }
   };
 
-  const handleAddMeasureFilter = () => {
+  const handleAddMeasureFilter = (filter?: { column: string, operator: string, value: string }) => {
     if (!activeDatasetAdapter?.semantic) return;
-    const field = activeDatasetAdapter.semantic.measures[0]?.name;
-    if (field) qa.addFilter(field, 'measure');
+    if (filter) {
+      qa.addFilter(filter, 'measure');
+    } else {
+      const field = activeDatasetAdapter.semantic.measures[0]?.name;
+      if (field) qa.addFilter(field, 'measure');
+    }
   };
 
   const handleRunQuery = () => {
@@ -363,11 +371,23 @@ function App() {
         alignItems: 'center',
         justifyContent: 'space-between',
         flexShrink: 0,
-        background: 'var(--bg-panel)'
+        background: 'var(--bg-panel)',
+        fontFamily: "'Inter', sans-serif"
       }}>
-        <div style={{ display: 'flex', alignItems: 'center' }}>
-          <h1 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 'bold' }}>DuckDB WASM</h1>
-          <span style={{ marginLeft: '10px', fontSize: '0.9rem', color: 'var(--text-secondary)' }}>Semantic Layer</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          {/* Logo Placeholder - will be replaced by img tag later if we want inline logo */}
+          <h1 style={{
+            margin: 0,
+            fontSize: '1.5rem',
+            fontWeight: '600',
+            letterSpacing: '-0.5px',
+            color: 'var(--primary-color)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '10px'
+          }}>
+            Tabulador
+          </h1>
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>

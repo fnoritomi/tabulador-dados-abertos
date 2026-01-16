@@ -35,7 +35,7 @@ export class QueryRunner {
         // Check High Cardinality Tag
         // Check High Cardinality Tag or Config
         let shouldPartition = forcePartitioning || false;
-        let plannerOptions: { target_per_bucket?: number, threshold?: number, limit_multiplier?: number } | undefined;
+        let plannerOptions: { target_per_bucket?: number, threshold?: number, limit_target_multiplier?: number, limit_threshold_multiplier?: number } | undefined;
 
         if (!shouldPartition || true) { // Always check model for config options even if already partitioning
             const model = registry.getModel(queryIR.semanticModel);
@@ -94,7 +94,7 @@ export class QueryRunner {
             force: boolean,
             onStatus?: (msg: string) => void,
             signal?: AbortSignal,
-            plannerOptions?: { target_per_bucket?: number, threshold?: number, limit_multiplier?: number }
+            plannerOptions?: { target_per_bucket?: number, threshold?: number, limit_target_multiplier?: number, limit_threshold_multiplier?: number }
         }
     ): AsyncGenerator<RecordBatch, void, unknown> {
         const { force, onStatus, signal, plannerOptions } = options;

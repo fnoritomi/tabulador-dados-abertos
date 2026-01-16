@@ -126,7 +126,8 @@ export const SemanticModelSchema = z.object({
             enabled: z.boolean().optional(),
             target_per_bucket: z.number().optional(),
             threshold: z.number().optional(),
-            limit_multiplier: z.number().optional()
+            limit_target_multiplier: z.number().optional(),
+            limit_threshold_multiplier: z.number().optional()
         })
     ]).optional(),
 });

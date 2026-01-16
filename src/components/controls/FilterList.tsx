@@ -1,11 +1,12 @@
-import React from 'react';
+import React, { useState } from 'react';
 import type { Filter } from '../../types';
+import { FilterModal } from '../modals/FilterModal';
 
 interface FilterListProps {
     title: string;
     filters: Filter[];
     options: { name: string; label?: string; groupLabel?: string }[];
-    onAdd: () => void;
+    onAdd: (filter?: { column: string, operator: string, value: string }) => void;
     onRemove: (id: number) => void;
     onUpdate: (id: number, field: keyof Filter, value: string) => void;
     type: 'dimension' | 'measure';
@@ -16,18 +17,39 @@ interface FilterListProps {
 export const FilterList: React.FC<FilterListProps> = ({
     title, filters, options, onAdd, onRemove, onUpdate, type, color, bgColor
 }) => {
-    // Group options by groupLabel
-    const groupedOptions = options.reduce((acc, opt) => {
-        const group = opt.groupLabel || 'Outros';
-        if (!acc[group]) acc[group] = [];
-        acc[group].push(opt);
-        return acc;
-    }, {} as Record<string, typeof options>);
+    const [isExpanded, setIsExpanded] = useState(true);
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [editingFilter, setEditingFilter] = useState<Filter | undefined>(undefined);
 
-    const hasGroups = options.some(o => o.groupLabel);
-
-    const [isExpanded, setIsExpanded] = React.useState(true);
     const toggleList = () => setIsExpanded(prev => !prev);
+
+    const handleOpenAdd = () => {
+        setEditingFilter(undefined);
+        setIsModalOpen(true);
+    };
+
+    const handleOpenEdit = (filter: Filter) => {
+        setEditingFilter(filter);
+        setIsModalOpen(true);
+    };
+
+    const handleSave = (filterData: Omit<Filter, 'id'>) => {
+        if (editingFilter) {
+            // Update existing
+            if (editingFilter.column !== filterData.column) onUpdate(editingFilter.id, 'column', filterData.column);
+            if (editingFilter.operator !== filterData.operator) onUpdate(editingFilter.id, 'operator', filterData.operator);
+            if (editingFilter.value !== filterData.value) onUpdate(editingFilter.id, 'value', filterData.value);
+        } else {
+            // Add new
+            onAdd(filterData);
+        }
+    };
+
+    // Helper to get label
+    const getLabel = (name: string) => {
+        const opt = options.find(o => o.name === name);
+        return opt?.label || name;
+    };
 
     return (
         <div style={{ marginBottom: '20px', padding: '10px', border: `1px solid var(--border-color)`, borderRadius: '4px', background: bgColor }}>
@@ -54,74 +76,84 @@ export const FilterList: React.FC<FilterListProps> = ({
 
             {isExpanded && (
                 <>
+                    {filters.length === 0 && (
+                        <div style={{ fontStyle: 'italic', color: 'var(--text-secondary)', marginBottom: '10px', fontSize: '0.9em' }}>
+                            Nenhum filtro definido.
+                        </div>
+                    )}
+
                     {filters.map(filter => (
-                        <div key={filter.id} style={{ display: 'flex', gap: '10px', marginBottom: '10px', alignItems: 'center' }}>
-                            <select
-                                value={filter.column}
-                                onChange={(e) => onUpdate(filter.id, 'column', e.target.value)}
-                                style={{ padding: '5px', background: 'var(--bg-input)', color: 'var(--text-main)', border: '1px solid var(--border-color)' }}
-                            >
-                                {hasGroups ? (
-                                    Object.entries(groupedOptions).map(([group, opts]) => {
-                                        if (group === 'Outros') {
-                                            return opts.map(opt => (
-                                                <option key={opt.name} value={opt.name}>{opt.label || opt.name}</option>
-                                            ));
-                                        }
-                                        return (
-                                            <optgroup key={group} label={group}>
-                                                {opts.map(opt => (
-                                                    <option key={opt.name} value={opt.name}>{opt.label || opt.name}</option>
-                                                ))}
-                                            </optgroup>
-                                        );
-                                    })
-                                ) : (
-                                    options.map(opt => (
-                                        <option key={opt.name} value={opt.name}>{opt.label || opt.name}</option>
-                                    ))
-                                )}
-                            </select>
-                            <select
-                                value={filter.operator}
-                                onChange={(e) => onUpdate(filter.id, 'operator', e.target.value)}
-                                style={{ padding: '5px', background: 'var(--bg-input)', color: 'var(--text-main)', border: '1px solid var(--border-color)' }}
-                            >
-                                {type === 'dimension' ? (
-                                    <>
-                                        <option value="=">=</option>
-                                        <option value="!=">!=</option>
-                                        <option value=">">&gt;</option>
-                                        <option value="<">&lt;</option>
-                                        <option value=">=">&gt;=</option>
-                                        <option value="<=">&lt;=</option>
-                                        <option value="LIKE">LIKE (Contém)</option>
-                                        <option value="IN">IN (Lista)</option>
-                                    </>
-                                ) : (
-                                    <>
-                                        <option value=">">&gt;</option>
-                                        <option value="<">&lt;</option>
-                                        <option value=">=">&gt;=</option>
-                                        <option value="<=">&lt;=</option>
-                                        <option value="=">=</option>
-                                        <option value="!=">!=</option>
-                                    </>
-                                )}
-                            </select>
-                            <input
-                                type={type === 'measure' ? "number" : "text"}
-                                value={filter.value}
-                                onChange={(e) => onUpdate(filter.id, 'value', e.target.value)}
-                                placeholder={type === 'measure' ? "Valor Numérico" : "Valor"}
-                                style={{ padding: '5px', background: 'var(--bg-input)', color: 'var(--text-main)', border: '1px solid var(--border-color)' }}
-                            />
-                            <button onClick={() => onRemove(filter.id)} style={{ color: 'red', cursor: 'pointer', borderColor: 'var(--border-color)' }}>X</button>
+                        <div key={filter.id} style={{
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            marginBottom: '8px',
+                            padding: '8px',
+                            background: 'var(--bg-input)', // Slightly distinct background
+                            borderRadius: '4px',
+                            border: '1px solid var(--border-color)'
+                        }}>
+                            <div style={{ fontSize: '0.9em', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                <strong>{getLabel(filter.column)}</strong> <span style={{ color: 'var(--primary-color)' }}>{filter.operator}</span> {filter.value}
+                            </div>
+
+                            <div style={{ display: 'flex', gap: '5px' }}>
+                                <button
+                                    onClick={() => handleOpenEdit(filter)}
+                                    title="Editar"
+                                    style={{
+                                        cursor: 'pointer',
+                                        background: 'none',
+                                        border: 'none',
+                                        fontSize: '1.1em'
+                                    }}
+                                >
+                                    ✏️
+                                </button>
+                                <button
+                                    onClick={() => onRemove(filter.id)}
+                                    title="Excluir"
+                                    style={{
+                                        cursor: 'pointer',
+                                        background: 'none',
+                                        border: 'none',
+                                        color: 'red',
+                                        fontSize: '1.1em'
+                                    }}
+                                >
+                                    🗑️
+                                </button>
+                            </div>
                         </div>
                     ))}
-                    <button onClick={onAdd} style={{ fontSize: '0.9em', borderColor: 'var(--border-color)' }}>+ Adicionar Filtro</button>
+
+                    <button
+                        onClick={handleOpenAdd}
+                        style={{
+                            fontSize: '0.9em',
+                            borderColor: 'var(--border-color)',
+                            width: '100%',
+                            padding: '8px',
+                            cursor: 'pointer',
+                            background: 'var(--bg-panel-secondary)',
+                            color: 'var(--text-main)',
+                            border: '1px dashed var(--border-color)',
+                            borderRadius: '4px'
+                        }}
+                    >
+                        + Adicionar Filtro
+                    </button>
                 </>
             )}
+
+            <FilterModal
+                isOpen={isModalOpen}
+                onClose={() => setIsModalOpen(false)}
+                onSave={handleSave}
+                initialFilter={editingFilter}
+                options={options}
+                type={type}
+            />
         </div>
     );
 };

@@ -24,7 +24,7 @@ export class SafetyPlanner {
         conn: duckdb.AsyncDuckDBConnection,
         queryIR: QueryIR,
         forcePartitioning: boolean = false,
-        options?: { target_per_bucket?: number, threshold?: number, limit_multiplier?: number }
+        options?: { target_per_bucket?: number, threshold?: number, limit_target_multiplier?: number, limit_threshold_multiplier?: number }
     ): Promise<PartitionPlan> {
         // 1. If not an aggregate query or no dimensions, no need to partition (usually)
         if (queryIR.dimensions.length === 0) {
@@ -47,8 +47,15 @@ export class SafetyPlanner {
 
         // 3. Decide on Partitioning
         // Threshold: e.g., > 150k groups triggers partitioning, or if forced (retry)
-        const THRESHOLD = options?.threshold || 150_000;
-        const shouldPartition = forcePartitioning || approxGroups > THRESHOLD;
+        const defaultThreshold = options?.threshold || 150_000;
+        let threshold = defaultThreshold;
+
+        // If limit is present and we have a limit_threshold_multiplier, adjust the threshold
+        if (queryIR.limit && queryIR.limit > 0 && options?.limit_threshold_multiplier) {
+            threshold = queryIR.limit * options.limit_threshold_multiplier;
+        }
+
+        const shouldPartition = forcePartitioning || approxGroups > threshold;
 
         if (!shouldPartition) {
             return { enabled: false, bucketCount: 1, bucketKeys: [], estimatedGroups: approxGroups };
@@ -62,7 +69,7 @@ export class SafetyPlanner {
         // If there is a limit, we don't need huge buckets. 
         // We want to return roughly the limit amount (or slightly more to account for skew)
         if (queryIR.limit && queryIR.limit > 0) {
-            const multiplier = options?.limit_multiplier || 3;
+            const multiplier = options?.limit_target_multiplier || 3;
             target = Math.min(target, queryIR.limit * multiplier);
         }
 

@@ -461,15 +461,30 @@ ${whereClause}
                 if (dim) fieldExpr = dim.expr;
             }
 
+            if (f.operator === 'IN') {
+                let values: any[] = [];
+                if (Array.isArray(f.value)) {
+                    values = f.value;
+                } else if (typeof f.value === 'string') {
+                    // Split by comma and trim
+                    values = f.value.split(',').map(v => v.trim()).filter(v => v.length > 0);
+                }
+
+                if (values.length > 0) {
+                    const quotedList = values.map((v: any) =>
+                        typeof v === 'string' ? `'${v.replace(/'/g, "''")}'` : v
+                    ).join(', ');
+                    return `${fieldExpr} IN (${quotedList})`;
+                } else {
+                    // Empty IN usually results in false, or ignore. 
+                    // Valid SQL for empty list is IN (NULL) or 1=0.
+                    return '1=0';
+                }
+            }
+
             let val = f.value;
             if (typeof val === 'string') {
                 val = `'${val.replace(/'/g, "''")}'`;
-            }
-            if (f.operator === 'IN' && Array.isArray(f.value)) {
-                const quotedList = f.value.map((v: any) =>
-                    typeof v === 'string' ? `'${v.replace(/'/g, "''")}'` : v
-                ).join(', ');
-                return `${fieldExpr} IN (${quotedList})`;
             }
             return `${fieldExpr} ${f.operator} ${val}`;
         });

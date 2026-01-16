@@ -65,7 +65,7 @@ export const useQueryExecutor = (db: duckdb.AsyncDuckDB | null, options: Executo
 
                 console.log("[Executor] Consuming generator...");
                 const batches: RecordBatch[] = [];
-                let batchCount = 0;
+                // let batchCount = 0;
                 for await (const batch of generator) {
                     if (signal.aborted) throw new Error("Cancelled");
                     // console.log("[Executor] Got batch", batchCount++); 
@@ -112,7 +112,7 @@ export const useQueryExecutor = (db: duckdb.AsyncDuckDB | null, options: Executo
                                 });
                             },
                             // If needed
-                            getChild: (name: string) => null // stub
+                            getChild: (_name: string) => null // stub
                         } as any as Table;
 
                         console.log("[Executor] Virtual Table created safely.");

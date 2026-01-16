@@ -27,8 +27,9 @@ export class FileSystemService {
                 const writable = await fileHandle.createWritable();
                 return new NativeFileWriter(writable);
             }
-        } catch (err: any) {
-            if (err.name === 'AbortError') {
+        } catch (err: unknown) {
+            const error = err as Error;
+            if (error.name === 'AbortError') {
                 throw new Error("Exportação cancelada pelo usuário.");
             }
             console.warn('File System Access API error or unsupported, using fallback', err);
@@ -57,7 +58,7 @@ class NativeFileWriter implements FileWriter {
     async abort(): Promise<void> {
         try {
             await this.writable.abort();
-        } catch (ignored) { }
+        } catch { /* ignore */ }
     }
 }
 

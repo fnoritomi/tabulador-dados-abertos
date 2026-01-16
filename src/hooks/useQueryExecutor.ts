@@ -112,14 +112,15 @@ export const useQueryExecutor = (db: duckdb.AsyncDuckDB | null, options: Executo
                                 });
                             },
                             // If needed
-                            getChild: (_name: string) => null // stub
+                            getChild: () => null // stub
                         } as any as Table;
 
                         console.log("[Executor] Virtual Table created safely.");
 
-                    } catch (e: any) {
-                        console.warn("Virtual Table creation error", e);
-                        console.error(e.stack);
+                    } catch (e: unknown) {
+                        const err = e as Error;
+                        console.warn("Virtual Table creation error", err);
+                        console.error(err.stack);
                         finalTable = null;
                     }
                 } else {
@@ -146,15 +147,16 @@ export const useQueryExecutor = (db: duckdb.AsyncDuckDB | null, options: Executo
                 setStatusMessage(null);
             }
 
-        } catch (err: any) {
+        } catch (err: unknown) {
             console.error("Executor Error:", err);
-            if (err.stack) console.error(err.stack);
+            const error = err as Error;
+            if (error.stack) console.error(error.stack);
 
             if (currentQueryId === queryIdRef.current) {
-                if (err.message === 'Aborted' || err.message === 'Cancelled') {
+                if (error.message === 'Aborted' || error.message === 'Cancelled') {
                     // ignore
                 } else {
-                    setError(err.message || 'Erro ao executar consulta');
+                    setError(error.message || 'Erro ao executar consulta');
                 }
                 setStatusMessage(null);
             }
@@ -165,7 +167,7 @@ export const useQueryExecutor = (db: duckdb.AsyncDuckDB | null, options: Executo
             if (localConn) {
                 try {
                     await localConn.close();
-                } catch (e) { /* ignore */ }
+                } catch { /* ignore */ }
                 if (activeConn.current === localConn) {
                     activeConn.current = null;
                 }

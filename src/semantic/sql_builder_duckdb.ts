@@ -377,7 +377,7 @@ ${whereClause}
         });
 
         const mainDataset = registry.getDataset(model.model);
-        let mainRelation = this.resolveRelation(model.model, mainDataset);
+        const mainRelation = this.resolveRelation(model.model, mainDataset);
         const fromClause = `FROM ${mainRelation} AS ${model.alias || 't'}`;
 
         const joinClauses: string[] = [];
@@ -462,7 +462,7 @@ ${whereClause}
             }
 
             if (f.operator === 'IN') {
-                let values: any[] = [];
+                let values: unknown[] = [];
                 if (Array.isArray(f.value)) {
                     values = f.value;
                 } else if (typeof f.value === 'string') {
@@ -471,8 +471,8 @@ ${whereClause}
                 }
 
                 if (values.length > 0) {
-                    const quotedList = values.map((v: any) =>
-                        typeof v === 'string' ? `'${v.replace(/'/g, "''")}'` : v
+                    const quotedList = values.map((v: unknown) =>
+                        typeof v === 'string' ? `'${v.replace(/'/g, "''")}'` : String(v)
                     ).join(', ');
                     return `${fieldExpr} IN (${quotedList})`;
                 } else {
@@ -496,7 +496,7 @@ ${whereClause}
         return `ORDER BY ${parts.join(', ')}`;
     }
 
-    private emitAggregate(meas: any): string {
+    private emitAggregate(meas: Measure): string {
         let expr = meas.expr;
 
         const hasFunction = /^\w+\(.*\)$/.test(expr.trim());

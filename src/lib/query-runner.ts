@@ -37,7 +37,7 @@ export class QueryRunner {
         let shouldPartition = forcePartitioning || false;
         let plannerOptions: { target_per_bucket?: number, threshold?: number, limit_target_multiplier?: number, limit_threshold_multiplier?: number } | undefined;
 
-        if (!shouldPartition || true) { // Always check model for config options even if already partitioning
+        if (!shouldPartition) {
             const model = registry.getModel(queryIR.semanticModel);
             if (model) {
                 if (typeof model.high_cardinality === 'object') {
@@ -64,7 +64,6 @@ export class QueryRunner {
             // Verify signal before starting
             if (signal?.aborted) throw new Error("Aborted");
 
-            // @ts-ignore
             const reader = await conn.send(sql, true);
 
             async function* standardGenerator() {
@@ -77,8 +76,9 @@ export class QueryRunner {
 
             return standardGenerator();
 
-        } catch (err: any) {
-            const isOOM = err.message && (err.message.includes('Out of Memory') || err.message.includes('allocation failed'));
+        } catch (err: unknown) {
+            const error = err as Error;
+            const isOOM = error.message && (error.message.includes('Out of Memory') || error.message.includes('allocation failed'));
             if (isOOM) {
                 onStatus?.("OOM detectado. Tentando particionamento...");
                 return this.runPartitionedGenerator(conn, queryIR, { force: true, onStatus, signal, plannerOptions });
@@ -105,7 +105,6 @@ export class QueryRunner {
         if (!plan.enabled) {
             // Planner decided not to partition
             const sql = this.builder.build(queryIR);
-            // @ts-ignore
             const reader = await conn.send(sql, true);
             for await (const batch of reader) {
                 if (signal?.aborted) throw new Error("Aborted");
@@ -137,7 +136,6 @@ export class QueryRunner {
 
             // Use the same connection (no fresh connection overhead)
             // PASS TRUE allows streaming result to prevent materialization
-            // @ts-ignore - The underlying type definition might be missing the optional arg in some versions
             const reader = await conn.send(sql, true);
 
             for await (const batch of reader) {
@@ -145,7 +143,7 @@ export class QueryRunner {
 
                 // duckdb-wasm's RecordBatch might have numRows property or use length
                 // Cast to any to access safely
-                const b = batch as any;
+                const b = batch as { numRows?: number; length?: number };
                 const count = b.numRows || b.length || 0;
 
                 if (count > 0) {

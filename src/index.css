@@ -32,6 +32,8 @@
   --color-success: #28a745;
   --color-warning: #e67e22;
   --color-info: #007bff;
+  
+  --bg-table-header: #e0e0e0;
 }
 
 /* --- Dark Theme Overrides --- */
@@ -57,6 +59,8 @@
   --color-success: #51cf66;
   --color-warning: #fcc419;
   --color-info: #339af0;
+
+  --bg-table-header: #333333;
 }
 
 /* --- Global Styles using Tokens --- */

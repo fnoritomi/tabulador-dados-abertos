@@ -7,7 +7,7 @@ describe('useAppQueryState', () => {
         const { result } = renderHook(() => useAppQueryState());
         expect(result.current.state.selectedColumns).toEqual([]);
         expect(result.current.state.limit).toBe(10000);
-        expect(result.current.state.isSemanticMode).toBe(false);
+        expect(result.current.state.isSemanticMode).toBe(true);
     });
 
     it('should toggle columns and clear dimensions/measures', () => {

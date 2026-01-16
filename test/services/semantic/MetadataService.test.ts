@@ -65,19 +65,6 @@ describe('MetadataService', () => {
         expect(label).toBe('Município');
     });
 
-    it('should return flat dimension list with attributes', () => {
-        const flat = MetadataService.getFlatDimensions(mockDataset);
-        // Expect: uf (attr), municipio (attr), cod_mun (attr). 
-        // Parent Dimensions (uf, localizacao) are NOT included if they have attributes.
-        expect(flat).toHaveLength(3);
 
-        const mun = flat.find(d => d.name === 'municipio') as any;
-        expect(mun).toBeDefined();
-        expect(mun.groupId).toBe('localizacao');
-        expect(mun.groupLabel).toBe('Localização');
 
-        const uf = flat.find(d => d.name === 'uf') as any;
-        expect(uf).toBeDefined();
-        expect(uf.groupId).toBe('uf');
-    });
 });

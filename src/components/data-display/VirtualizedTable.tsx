@@ -62,7 +62,7 @@ const VirtualizedTable: React.FC<VirtualizedTableProps> = ({
     // Render fixed header
     const fixedHeaderContent = () => {
         return (
-            <tr style={{ backgroundColor: 'var(--bg-panel)', borderBottom: '2px solid var(--border-color)' }}>
+            <tr style={{ backgroundColor: 'var(--bg-table-header)', borderBottom: '2px solid var(--border-color)' }}>
                 {columns.map(col => (
                     <th key={col} style={{
                         padding: '10px',
@@ -71,7 +71,7 @@ const VirtualizedTable: React.FC<VirtualizedTableProps> = ({
                         whiteSpace: 'nowrap',
                         fontWeight: 'bold',
                         fontSize: '13px',
-                        backgroundColor: 'var(--bg-panel)', // Ensure opaque for sticky
+                        backgroundColor: 'var(--bg-table-header)', // Ensure opaque for sticky
                         color: 'var(--text-main)'
                     }}>
                         {getColumnLabel(col)}

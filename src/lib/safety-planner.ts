@@ -150,7 +150,7 @@ export class SafetyPlanner {
         return this.builder.buildEstimationQuery(queryIR);
     }
 
-    private selectBucketKeys(row: any, dimensions: string[], bucketCount: number): string[] {
+    private selectBucketKeys(row: Record<string, unknown>, dimensions: string[], bucketCount: number): string[] {
         // Collect cardinalities
         const cards = dimensions.map(dim => ({
             dim,

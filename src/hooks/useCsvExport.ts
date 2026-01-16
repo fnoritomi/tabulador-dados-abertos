@@ -126,7 +126,6 @@ export function useCsvExport() {
             for await (const batch of generator) {
                 if (signal.aborted) throw new Error("Cancelado");
 
-                // @ts-ignore
                 const csvChunk = arrowBatchToCsv(batch as any, isFirstBatch, getColumnOverride, getColumnLabel, getColumnType, formattingConfig);
 
                 const bytes = encodeText(csvChunk, formattingConfig.csv.encoding);
@@ -182,10 +181,11 @@ export function useCsvExport() {
                 details: { time: duration, sizeMB }
             };
 
-        } catch (err: any) {
-            const msg = err.message || "";
+        } catch (err: unknown) {
+            const error = err as Error;
+            const msg = error.message || "";
             if (writer) {
-                try { await writer.abort(); } catch { }
+                try { await writer.abort(); } catch { /* ignore */ }
             }
             if (msg.includes("Cancelado") || msg.includes("Aborted")) {
                 return { success: false, message: "Exportação cancelada pelo usuário." };

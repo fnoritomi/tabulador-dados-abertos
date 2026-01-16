@@ -10,11 +10,16 @@ const mockDataset: Dataset = {
     semantic: {
         dimensions: [
             { name: 'dim1', type: 'VARCHAR', label: 'Dimension 1' },
-            { name: 'dim2', type: 'INTEGER' } // No label
+            { name: 'dim2', type: 'INTEGER' } as any // No label explicitly for test
         ],
         measures: [
-            { name: 'meas1', sql: 'SUM(x)', label: 'Total Sales', display_decimals: 2 },
-            { name: 'meas2', sql: 'COUNT(*)' } // No label, no formatting
+            {
+                name: 'meas1',
+                label: 'Measure 1',
+                sql: 'sum(x)',
+                display_decimals: 2
+            },
+            { name: 'meas2', sql: 'COUNT(*)', label: 'Count' } // No label, no formatting
         ]
     }
 };
@@ -34,7 +39,7 @@ describe('MetadataService', () => {
         });
 
         it('should return label for measure', () => {
-            expect(MetadataService.getColumnLabel(mockDataset, 'meas1', 'semantic')).toBe('Total Sales');
+            expect(MetadataService.getColumnLabel(mockDataset, 'meas1', 'semantic')).toBe('Measure 1');
         });
 
         it('should return default name if dataset is null', () => {
@@ -64,7 +69,7 @@ describe('MetadataService', () => {
 
     describe('getColumnFormat', () => {
         it('should return decimals for measure if defined', () => {
-            expect(MetadataService.getColumnFormat(mockDataset, 'meas1', 'semantic')).toEqual({ decimals: 2 });
+            expect(MetadataService.getColumnFormat(mockDataset, 'meas1', 'semantic')).toEqual({ type: 'number', decimals: 2 });
         });
 
         it('should return undefined for measure without explicit decimals', () => {

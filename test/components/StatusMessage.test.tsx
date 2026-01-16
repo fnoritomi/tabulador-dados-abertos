@@ -39,14 +39,14 @@ describe('StatusMessage', () => {
     it('should show last export message error', () => {
         render(<StatusMessage {...defaultProps} lastExportMessage={{ text: "Export Failed", type: 'error' }} />);
         const msg = screen.getByText("Export Failed");
-        expect(msg.style.color).toBe('red');
+        expect(msg.style.color).toBe('var(--color-error)');
     });
 
     it('should show last export message success', () => {
         render(<StatusMessage {...defaultProps} lastExportMessage={{ text: "Export Done", type: 'success' }} />);
         const msg = screen.getByText("Export Done");
         // defined in component as #666
-        expect(msg.style.color).toBe('rgb(102, 102, 102)');
+        expect(msg.style.color).toBe('var(--text-secondary)');
     });
 
     it('should show status message (cancellation) if no export', () => {

@@ -5,7 +5,10 @@ export interface Filter {
     value: string;
 }
 
+export type QueryMode = 'dataset' | 'semantic';
+
 export interface QueryState {
+    mode: QueryMode;
     selectedDatasetId: string;
     selectedColumns: string[];
     selectedDimensions: string[];

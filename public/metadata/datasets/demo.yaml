@@ -1,0 +1,39 @@
+version: 1
+datasets:
+  - name: demo
+    description: Demo Dataset (Lineitem) - TPC-H
+    sources:
+      - https://shell.duckdb.org/data/tpch/0_01/parquet/lineitem.parquet
+    columns:
+      - name: l_orderkey
+        type: integer
+      - name: l_partkey
+        type: integer
+      - name: l_suppkey
+        type: integer
+      - name: l_linenumber
+        type: integer
+      - name: l_quantity
+        type: double
+      - name: l_extendedprice
+        type: double
+      - name: l_discount
+        type: double
+      - name: l_tax
+        type: double
+      - name: l_returnflag
+        type: string
+      - name: l_linestatus
+        type: string
+      - name: l_shipdate
+        type: date
+      - name: l_commitdate
+        type: date
+      - name: l_receiptdate
+        type: date
+      - name: l_shipinstruct
+        type: string
+      - name: l_shipmode
+        type: string
+      - name: l_comment
+        type: string

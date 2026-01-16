@@ -1,0 +1,36 @@
+version: 1
+semantic_models:
+  - name: orders
+    description: Orders Model
+    model: orders
+    dimensions:
+      - name: o_orderkey
+        type: categorical
+        expr: o_orderkey
+        label: Order ID
+        
+      - name: o_orderstatus
+        type: categorical
+        expr: o_orderstatus
+        label: Order Status
+        
+      - name: o_orderpriority
+        type: categorical
+        expr: o_orderpriority
+        label: Priority
+        
+    measures:
+      - name: count_orders
+        type: count
+        expr: "*"
+        label: Total Orders
+        
+      - name: sum_revenue
+        type: sum
+        expr: o_totalprice
+        label: Total Revenue
+        format:
+          number:
+            use_grouping: true
+            decimals: 2
+            currency: USD

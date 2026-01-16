@@ -1,15 +1,14 @@
 import { useState, useCallback } from 'react';
-import type { Filter } from '../types';
+import type { Filter, QueryMode } from '../types';
 
 export function useAppQueryState() {
+    const [mode, setMode] = useState<QueryMode>('semantic');
     const [selectedColumns, setSelectedColumns] = useState<string[]>([]);
     const [selectedDimensions, setSelectedDimensions] = useState<string[]>([]);
     const [selectedMeasures, setSelectedMeasures] = useState<string[]>([]);
     const [limit, setLimit] = useState<number>(10000);
     const [filters, setFilters] = useState<Filter[]>([]);
     const [measureFilters, setMeasureFilters] = useState<Filter[]>([]);
-
-    const isSemanticMode = selectedDimensions.length > 0 || selectedMeasures.length > 0;
 
     const reset = useCallback(() => {
         setSelectedColumns([]);
@@ -18,16 +17,18 @@ export function useAppQueryState() {
         setFilters([]);
         setMeasureFilters([]);
         setLimit(10000);
+        // Mode persists or reset to default? Let's keep current mode or default to semantic.
+        // If dataset changes, App logic typically resets everything. 
     }, []);
 
     const toggleColumn = useCallback((col: string) => {
         setSelectedColumns(prev => {
             const newState = prev.includes(col) ? prev.filter(c => c !== col) : [...prev, col];
-            // If we select a raw column, clear semantic selections
             if (newState.length > 0) {
+                setMode('dataset');
                 setSelectedDimensions([]);
                 setSelectedMeasures([]);
-                setMeasureFilters([]); // Measure filters only make sense in semantic mode
+                setMeasureFilters([]);
             }
             return newState;
         });
@@ -36,19 +37,27 @@ export function useAppQueryState() {
     const toggleDimension = useCallback((dim: string) => {
         setSelectedDimensions(prev => {
             const newState = prev.includes(dim) ? prev.filter(d => d !== dim) : [...prev, dim];
-            // If we select a dimension, clear raw columns
             if (newState.length > 0) {
+                setMode('semantic');
                 setSelectedColumns([]);
             }
             return newState;
         });
     }, []);
 
+    const setDimensions = useCallback((dims: string[]) => {
+        setSelectedDimensions(dims);
+        if (dims.length > 0) {
+            setMode('semantic');
+            setSelectedColumns([]);
+        }
+    }, []);
+
     const toggleMeasure = useCallback((meas: string) => {
         setSelectedMeasures(prev => {
             const newState = prev.includes(meas) ? prev.filter(m => m !== meas) : [...prev, meas];
-            // If we select a measure, clear raw columns
             if (newState.length > 0) {
+                setMode('semantic');
                 setSelectedColumns([]);
             }
             return newState;
@@ -89,17 +98,20 @@ export function useAppQueryState() {
 
     return {
         state: {
+            mode,
             selectedColumns,
             selectedDimensions,
             selectedMeasures,
             limit,
             filters,
             measureFilters,
-            isSemanticMode
+            isSemanticMode: mode === 'semantic'
         },
         actions: {
+            setMode,
             toggleColumn,
             toggleDimension,
+            setDimensions,
             toggleMeasure,
             setLimit,
             addFilter,

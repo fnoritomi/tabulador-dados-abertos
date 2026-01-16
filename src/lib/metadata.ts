@@ -28,6 +28,7 @@ export interface Dimension {
     name: string;
     label: string;
     description?: string;
+    group?: string; // logical grouping (e.g. 'Time', 'Geo')
     type?: string; // semantic type (e.g. 'geo', 'time') - optional
 
     // Simple Dimension (Leaf) properties

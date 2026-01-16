@@ -1,0 +1,63 @@
+version: 1
+semantic_models:
+  - name: "vendas"
+    description: "Fato de vendas"
+    model: "fato_vendas"             # relation no DuckDB
+    alias: "v"
+    grain: ["id_venda"]
+
+    joins:
+      - name: "produto"
+        model: "dim_produto"
+        alias: "p"
+        on: "v.id_produto = p.id_produto"
+        relationship: "many_to_one"
+
+    dimensions:
+      - name: "dt_venda"
+        type: "time"
+        expr: "v.dt_venda"
+        type_params:
+          time_granularity: "day"
+          available_granularities: ["day","month","year"]
+        is_partition: true
+        format:
+          date:
+            pattern: "MM/yyyy"          # override na UI quando grain=month
+            default_granularity: "month"
+
+      - name: "uf"
+        type: "categorical"
+        expr: "v.uf"
+
+      - name: "produto_nome"
+        type: "categorical"
+        expr: "p.nome"
+        join: "produto"
+
+    measures:
+      - name: "receita"
+        type: "sum"
+        expr: "v.vl_total"
+        format:
+          number:
+            use_grouping: true
+            decimals: 2
+            currency: "BRL"
+
+      - name: "pedidos"
+        type: "count_distinct"
+        expr: "v.id_venda"
+        format:
+          number:
+            use_grouping: true
+            decimals: 0
+
+      - name: "ticket_medio"
+        type: "derived"
+        expr: "${receita} / NULLIF(${pedidos}, 0)"
+        format:
+          number:
+            use_grouping: true
+            decimals: 2
+            currency: "BRL"

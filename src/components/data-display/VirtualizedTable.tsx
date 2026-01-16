@@ -43,7 +43,7 @@ const VirtualizedTable: React.FC<VirtualizedTableProps> = ({
                 // Map metadata types to formatting types
                 if (metaType === 'INTEGER' || metaType === 'BIGINT') types[f.name] = 'INTEGER';
                 else if (metaType === 'FLOAT' || metaType === 'DOUBLE' || metaType === 'DECIMAL' || metaType === 'REAL') types[f.name] = 'FLOAT';
-                else if (metaType === 'DATE') types[f.name] = 'DATE';
+                else if (metaType === 'DATE' || metaType === 'time') types[f.name] = 'DATE'; // Map semantic 'time' to DATE
                 else if (metaType === 'TIMESTAMP') types[f.name] = 'TIMESTAMP';
                 else types[f.name] = 'VARCHAR';
             } else {

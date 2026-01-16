@@ -1,5 +1,72 @@
 import React from 'react';
-import type { Dataset, Dimension } from '../../lib/metadata';
+import type { Dataset, Dimension, Measure } from '../../lib/metadata';
+
+interface MeasureListProps {
+    measures: Measure[];
+    selectedMeasures: string[];
+    onToggleMeasure: (meas: string) => void;
+}
+
+const MeasureList: React.FC<MeasureListProps> = ({ measures, selectedMeasures, onToggleMeasure }) => {
+    // Collapsible Logic
+    const [isExpanded, setIsExpanded] = React.useState(false);
+
+    const toggleList = () => setIsExpanded(prev => !prev);
+
+    return (
+        <div style={{ marginTop: '15px' }}>
+            {/* Header */}
+            <div style={{ display: 'flex', alignItems: 'center', marginBottom: '8px', paddingBottom: '5px', borderBottom: '1px solid var(--border-color)' }}>
+                <strong style={{ color: 'var(--text-main)', cursor: 'pointer', userSelect: 'none' }} onClick={toggleList}>
+                    Medidas (Agregação)
+                </strong>
+
+                <button
+                    onClick={toggleList}
+                    style={{
+                        background: 'none',
+                        border: 'none',
+                        cursor: 'pointer',
+                        fontWeight: 'bold',
+                        color: 'var(--text-secondary)',
+                        padding: '0 5px',
+                        fontSize: '1.2em',
+                        marginLeft: '5px'
+                    }}
+                    type="button"
+                    title={isExpanded ? "Ocultar Medidas" : "Exibir Medidas"}
+                >
+                    {isExpanded ? '-' : '+'}
+                </button>
+            </div>
+
+            {/* List */}
+            {isExpanded && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                    {measures.map(meas => (
+                        <label key={meas.name} style={{ display: 'flex', alignItems: 'center', cursor: 'pointer', color: 'var(--text-main)' }}>
+                            <input
+                                type="checkbox"
+                                checked={selectedMeasures.includes(meas.name)}
+                                onChange={() => onToggleMeasure(meas.name)}
+                                style={{ marginRight: '5px' }}
+                            />
+                            {meas.label || meas.name}
+                        </label>
+                    ))}
+                </div>
+            )}
+        </div>
+    );
+};
+
+interface MeasureListProps {
+    measures: Measure[];
+    selectedMeasures: string[];
+    onToggleMeasure: (meas: string) => void;
+}
+
+
 
 interface QueryBuilderUIProps {
     activeDataset: Dataset;
@@ -8,6 +75,7 @@ interface QueryBuilderUIProps {
     selectedMeasures: string[];
     onToggleColumn: (col: string) => void;
     onToggleDimension: (dim: string) => void;
+    onSelectDimensions?: (dims: string[]) => void;
     onToggleMeasure: (meas: string) => void;
 }
 
@@ -82,6 +150,196 @@ const DimensionNode: React.FC<DimensionNodeProps> = ({ node, selectedDimensions,
     );
 };
 
+const DimensionList: React.FC<{
+    dimensions: Dimension[];
+    selectedDimensions: string[];
+    onToggle: (dim: string) => void;
+    onSelectDimensions: (dims: string[]) => void;
+}> = ({ dimensions, selectedDimensions, onToggle, onSelectDimensions }) => {
+    // 1. Separate grouped and ungrouped
+    const groups: Record<string, Dimension[]> = {};
+    const ungrouped: Dimension[] = [];
+
+    // Helper to get all dimension names recursively
+    const getAllNames = (dims: Dimension[]): string[] => {
+        let names: string[] = [];
+        dims.forEach(d => {
+            names.push(d.name);
+            if (d.attributes) names.push(...d.attributes.map(a => a.name));
+            if (d.subDimensions) names.push(...getAllNames(d.subDimensions));
+        });
+        return names;
+    };
+
+    dimensions.forEach(dim => {
+        if (dim.group) {
+            if (!groups[dim.group]) groups[dim.group] = [];
+            groups[dim.group].push(dim);
+        } else {
+            ungrouped.push(dim);
+        }
+    });
+
+    // Expansion State
+    const [expandedGroups, setExpandedGroups] = React.useState<Record<string, boolean>>({});
+    // Main list starts collapsed (hiding groups)
+    const [isMainListExpanded, setIsMainListExpanded] = React.useState(false);
+
+    const toggleGroup = (group: string) => {
+        setExpandedGroups(prev => ({ ...prev, [group]: !prev[group] }));
+    };
+
+    const toggleMainList = () => {
+        setIsMainListExpanded(prev => !prev);
+    };
+
+    // Selection Logic
+    const allDimensionNames = getAllNames(dimensions);
+    const isAllSelected = allDimensionNames.length > 0 && allDimensionNames.every(d => selectedDimensions.includes(d));
+
+    const handleSelectAll = () => {
+        if (isAllSelected) {
+            onSelectDimensions([]);
+        } else {
+            onSelectDimensions(allDimensionNames);
+        }
+    };
+
+    const handleSelectGroup = (groupDims: Dimension[]) => {
+        const groupNames = getAllNames(groupDims);
+        const groupSelected = groupNames.every(d => selectedDimensions.includes(d));
+
+        if (groupSelected) {
+            const newSelection = selectedDimensions.filter(d => !groupNames.includes(d));
+            onSelectDimensions(newSelection);
+        } else {
+            const newSelection = Array.from(new Set([...selectedDimensions, ...groupNames]));
+            onSelectDimensions(newSelection);
+        }
+    };
+
+    return (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+
+            {/* Header: [Checkbox] Title [ExpandArrow] */}
+            <div style={{ display: 'flex', alignItems: 'center', marginBottom: '8px', paddingBottom: '5px', borderBottom: '1px solid var(--border-color)' }}>
+                <input
+                    type="checkbox"
+                    checked={isAllSelected}
+                    onChange={handleSelectAll}
+                    style={{ marginRight: '8px', cursor: 'pointer' }}
+                    title="Selecionar todas as dimensões"
+                />
+                <strong style={{ color: 'var(--text-main)', cursor: 'pointer', userSelect: 'none' }} onClick={toggleMainList}>
+                    Dimensões (Group By)
+                </strong>
+
+                <button
+                    onClick={toggleMainList}
+                    style={{
+                        background: 'none',
+                        border: 'none',
+                        cursor: 'pointer',
+                        fontWeight: 'bold',
+                        color: 'var(--text-secondary)',
+                        padding: '0 5px',
+                        fontSize: '1.2em',
+                        marginLeft: '5px'
+                    }}
+                    type="button"
+                    title={isMainListExpanded ? "Ocultar Grupos" : "Exibir Grupos"}
+                >
+                    {isMainListExpanded ? '-' : '+'}
+                </button>
+            </div>
+
+            {isMainListExpanded && (
+                <>
+                    {ungrouped.map(dim => (
+                        <DimensionNode
+                            key={dim.name}
+                            node={dim}
+                            selectedDimensions={selectedDimensions}
+                            onToggleDimension={onToggle}
+                        />
+                    ))}
+
+                    {/* Groups */}
+                    {Object.entries(groups).map(([groupName, groupDims]) => {
+                        const groupNames = getAllNames(groupDims);
+                        const isGroupSelected = groupNames.length > 0 && groupNames.every(d => selectedDimensions.includes(d));
+                        const isOpen = !!expandedGroups[groupName];
+
+                        return (
+                            <div key={groupName} style={{
+                                border: '1px solid var(--border-color)',
+                                borderRadius: '4px',
+                                marginBottom: '5px',
+                                background: 'var(--bg-panel)'
+                            }}>
+                                <div style={{
+                                    padding: '8px',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    background: 'var(--bg-panel-secondary)',
+                                    borderBottom: isOpen ? '1px solid var(--border-color)' : 'none'
+                                }}>
+                                    {/* Checkbox Left */}
+                                    <input
+                                        type="checkbox"
+                                        checked={isGroupSelected}
+                                        onChange={() => handleSelectGroup(groupDims)}
+                                        style={{ marginRight: '8px', cursor: 'pointer' }}
+                                        title="Selecionar grupo"
+                                    />
+
+                                    {/* Name Center (Clickable to toggle) */}
+                                    <span
+                                        onClick={() => toggleGroup(groupName)}
+                                        style={{ cursor: 'pointer', fontWeight: 600, color: 'var(--text-secondary)', userSelect: 'none' }}
+                                    >
+                                        {groupName}
+                                    </span>
+
+                                    {/* Arrow Right */}
+                                    <button
+                                        onClick={() => toggleGroup(groupName)}
+                                        style={{
+                                            background: 'none',
+                                            border: 'none',
+                                            cursor: 'pointer',
+                                            marginLeft: '5px',
+                                            fontWeight: 'bold',
+                                            color: 'var(--text-secondary)',
+                                            padding: '0 5px'
+                                        }}
+                                        type="button"
+                                    >
+                                        {isOpen ? '-' : '+'}
+                                    </button>
+                                </div>
+
+                                {isOpen && (
+                                    <div style={{ padding: '8px', paddingLeft: '20px', display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                                        {groupDims.map(dim => (
+                                            <DimensionNode
+                                                key={dim.name}
+                                                node={dim}
+                                                selectedDimensions={selectedDimensions}
+                                                onToggleDimension={onToggle}
+                                            />
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        );
+                    })}
+                </>
+            )}
+        </div>
+    );
+};
+
 export const QueryBuilderUI: React.FC<QueryBuilderUIProps> = ({
     activeDataset,
     selectedColumns,
@@ -89,27 +347,30 @@ export const QueryBuilderUI: React.FC<QueryBuilderUIProps> = ({
     selectedMeasures,
     onToggleColumn,
     onToggleDimension,
+    onSelectDimensions,
     onToggleMeasure
 }) => {
     return (
         <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap' }}>
-            {/* Raw Columns Selection */}
-            <div style={{ flex: 1, minWidth: '300px', marginBottom: '20px', padding: '10px', border: '1px solid var(--border-color)', borderRadius: '4px', background: 'var(--bg-panel)' }}>
-                <h3 style={{ marginTop: 0, color: 'var(--text-main)' }}>Colunas (Raw)</h3>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
-                    {activeDataset.schema.map(col => (
-                        <label key={col.name} style={{ display: 'flex', alignItems: 'center', cursor: 'pointer', color: 'var(--text-main)' }}>
-                            <input
-                                type="checkbox"
-                                checked={selectedColumns.includes(col.name)}
-                                onChange={() => onToggleColumn(col.name)}
-                                style={{ marginRight: '5px' }}
-                            />
-                            {col.name} <span style={{ color: 'var(--text-secondary)', fontSize: '0.8em', marginLeft: '4px' }}>({col.type})</span>
-                        </label>
-                    ))}
+            {/* Raw Columns Selection - Only in Dataset Mode (no semantic model) */}
+            {!activeDataset.semantic && (
+                <div style={{ flex: 1, minWidth: '300px', marginBottom: '20px', padding: '10px', border: '1px solid var(--border-color)', borderRadius: '4px', background: 'var(--bg-panel)' }}>
+                    <h3 style={{ marginTop: 0, color: 'var(--text-main)' }}>Colunas (Raw)</h3>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
+                        {activeDataset.schema.map(col => (
+                            <label key={col.name} style={{ display: 'flex', alignItems: 'center', cursor: 'pointer', color: 'var(--text-main)' }}>
+                                <input
+                                    type="checkbox"
+                                    checked={selectedColumns.includes(col.name)}
+                                    onChange={() => onToggleColumn(col.name)}
+                                    style={{ marginRight: '5px' }}
+                                />
+                                {col.name} <span style={{ color: 'var(--text-secondary)', fontSize: '0.8em', marginLeft: '4px' }}>({col.type})</span>
+                            </label>
+                        ))}
+                    </div>
                 </div>
-            </div>
+            )}
 
             {/* Semantic Selection */}
             {activeDataset.semantic && (
@@ -117,35 +378,23 @@ export const QueryBuilderUI: React.FC<QueryBuilderUIProps> = ({
                     <h3 style={{ marginTop: 0, color: 'var(--accent-color)' }}>Camada Semântica</h3>
 
                     <div style={{ marginBottom: '15px' }}>
-                        <strong style={{ color: 'var(--text-main)' }}>Dimensões (Group By)</strong>
+                        {/* Title moved inside DimensionList */}
                         <div style={{ marginTop: '5px' }}>
-                            {activeDataset.semantic.dimensions.map(dim => (
-                                <DimensionNode
-                                    key={dim.name}
-                                    node={dim}
-                                    selectedDimensions={selectedDimensions}
-                                    onToggleDimension={onToggleDimension}
-                                />
-                            ))}
+                            <DimensionList
+                                dimensions={activeDataset.semantic.dimensions}
+                                selectedDimensions={selectedDimensions}
+                                onToggle={onToggleDimension}
+                                onSelectDimensions={onSelectDimensions || (() => { })}
+                            />
                         </div>
                     </div>
 
-                    <div>
-                        <strong style={{ color: 'var(--text-main)' }}>Medidas (Agregação)</strong>
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', marginTop: '5px' }}>
-                            {activeDataset.semantic.measures.map(meas => (
-                                <label key={meas.name} style={{ display: 'flex', alignItems: 'center', cursor: 'pointer', color: 'var(--text-main)' }}>
-                                    <input
-                                        type="checkbox"
-                                        checked={selectedMeasures.includes(meas.name)}
-                                        onChange={() => onToggleMeasure(meas.name)}
-                                        style={{ marginRight: '5px' }}
-                                    />
-                                    {meas.label || meas.name}
-                                </label>
-                            ))}
-                        </div>
-                    </div>
+                    {/* Measures (Collapsible) */}
+                    <MeasureList
+                        measures={activeDataset.semantic.measures}
+                        selectedMeasures={selectedMeasures}
+                        onToggleMeasure={onToggleMeasure}
+                    />
                 </div>
             )}
         </div>

@@ -15,6 +15,7 @@ interface ExecutionBarProps {
     queryState: QueryState;
     filters: Filter[];
     measureFilters: Filter[];
+    rawSql?: string;
     onRunQuery: () => void;
     onCancelQuery: () => void;
     onExportStart: () => void;
@@ -33,6 +34,7 @@ export const ExecutionBar: React.FC<ExecutionBarProps> = ({
     queryState,
     filters,
     measureFilters,
+    rawSql,
     onRunQuery,
     onCancelQuery,
     onExportStart,
@@ -85,6 +87,7 @@ export const ExecutionBar: React.FC<ExecutionBarProps> = ({
                 queryState={queryState}
                 filters={filters}
                 measureFilters={measureFilters}
+                rawSql={rawSql}
                 disabled={warmingUp || queryLoading || isExporting}
                 onExportStart={onExportStart}
                 onExportEnd={onExportEnd}

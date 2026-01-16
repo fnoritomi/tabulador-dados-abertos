@@ -1,0 +1,77 @@
+version: 1
+semantic_models:
+  - name: demo
+    description: Demo Lineitem Model
+    model: demo
+    dimensions:
+      - name: l_orderkey
+        type: categorical
+        expr: l_orderkey
+        label: Order ID
+      
+      - name: l_returnflag
+        type: categorical
+        expr: l_returnflag
+        label: Return Flag
+        
+      - name: l_linestatus
+        type: categorical
+        expr: l_linestatus
+        label: Line Status
+        
+      - name: l_shipdate
+        type: time
+        expr: l_shipdate
+        label: Ship Date
+        type_params:
+          time_granularity: day
+          
+      - name: l_shipmode
+        type: categorical
+        expr: l_shipmode
+        label: Ship Mode
+        
+    measures:
+      - name: count_rows
+        type: count
+        expr: "*"
+        label: Row Count
+        
+      - name: sum_qty
+        type: sum
+        expr: l_quantity
+        label: Total Quantity
+        
+      - name: avg_price
+        type: avg
+        expr: l_extendedprice
+        label: Avg Price
+        format:
+          number:
+            decimals: 2
+            
+      - name: total_price
+        type: sum
+        expr: l_extendedprice
+        label: Total Price
+        format:
+          number:
+            decimals: 2
+            
+      - name: qt_last_ship_date
+        type: sum
+        expr: l_quantity
+        label: Qtd (Última Ship Date)
+        non_additive_dimension:
+          name: l_shipdate
+          window_choice: last
+          
+      - name: qt_last_ship_date_mode
+        type: sum
+        expr: l_quantity
+        label: Qtd (Última Ship Date por Mode)
+        non_additive_dimension:
+          name: l_shipdate
+          window_choice: last
+          window_groupings:
+            - l_shipmode

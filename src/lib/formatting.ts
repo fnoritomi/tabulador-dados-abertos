@@ -45,9 +45,10 @@ export const formatDate = (value: Date | number | string, config: AppFormattingC
     const date = new Date(value);
     if (isNaN(date.getTime())) return String(value);
 
-    // Explicit Pattern (legacy/custom support)
-    if (options?.pattern) {
-        return formatDateWithPattern(date, options.pattern);
+    // Explicit Pattern (legacy/custom support) or Config Default
+    const pattern = options?.pattern || config.defaults?.date?.pattern;
+    if (pattern) {
+        return formatDateWithPattern(date, pattern);
     }
 
     // Default Intl Date
@@ -62,8 +63,9 @@ export const formatTimestamp = (value: Date | number | string, config: AppFormat
     const date = new Date(value);
     if (isNaN(date.getTime())) return String(value);
 
-    if (options?.pattern) {
-        return formatDateWithPattern(date, options.pattern);
+    const pattern = options?.pattern || config.defaults?.timestamp?.pattern;
+    if (pattern) {
+        return formatDateWithPattern(date, pattern);
     }
 
     return new Intl.DateTimeFormat(options?.locale || config.locale, {

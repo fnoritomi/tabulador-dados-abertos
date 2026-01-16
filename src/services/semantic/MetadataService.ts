@@ -36,52 +36,7 @@ export class MetadataService {
         return undefined;
     }
 
-    /**
-     * Returns a flat list of all attributes and selectable (Simple) dimensions for easy UI consumption.
-     */
-    static getFlatAttributes(dataset: Dataset | null): Array<(Attribute | Dimension) & { groupId: string, groupLabel: string }> {
-        if (!dataset?.semantic) return [];
-        const flat: Array<(Attribute | Dimension) & { groupId: string, groupLabel: string }> = [];
-        this.flattenRecursive(dataset.semantic.dimensions, [], flat);
-        return flat;
-    }
 
-    private static flattenRecursive(nodes: Dimension[], parentPath: string[], result: any[]) {
-        for (const node of nodes) {
-            const currentPath = [...parentPath, node.label || node.name];
-
-            // Case A: Simple Dimension (Leaf)
-            // It acts as its own attribute equivalent
-            if (node.sql) {
-                result.push({
-                    ...node,
-                    groupId: node.name, // Self-grouping
-                    groupLabel: parentPath.join(' > ') // Use parent path as label context
-                });
-            }
-
-            // Case B: Composite Dimension - Add its Attributes
-            if (node.attributes) {
-                node.attributes.forEach(attr => {
-                    result.push({
-                        ...attr,
-                        groupId: node.name,
-                        groupLabel: currentPath.join(' > ')
-                    });
-                });
-            }
-
-            // Recurse into subDimensions
-            if (node.subDimensions) {
-                this.flattenRecursive(node.subDimensions, currentPath, result);
-            }
-        }
-    }
-
-    // Kept for compatibility but points to new method
-    static getFlatDimensions(dataset: Dataset | null): any[] {
-        return this.getFlatAttributes(dataset);
-    }
 
     /**
      * Resolves the display label for a column based on the dataset metadata and mode.
@@ -104,19 +59,32 @@ export class MetadataService {
      * Resolves the data type for a column to assist in export formatting.
      */
     static getColumnType(dataset: Dataset | null, colName: string, mode: 'semantic' | 'raw' = 'raw'): string | undefined {
-        if (!dataset || mode === 'raw') return undefined;
-        if (!dataset.semantic) return undefined;
+        if (!dataset) return undefined;
 
-        const def = this.findDimensionOrAttribute(dataset, colName);
+        // Semantic Mode
+        if (mode === 'semantic' && dataset.semantic) {
+            const def = this.findDimensionOrAttribute(dataset, colName);
+            if (def) {
+                if ('dataType' in def && def.dataType) return def.dataType;
+                if ('type' in def && def.type) return (def as Attribute).type;
+            }
 
-        // Check for 'dataType' (Simple Dim) or 'type' (Attribute)
-        if (def) {
-            if ('dataType' in def && def.dataType) return def.dataType;
-            if ('type' in def && def.type) return (def as Attribute).type;
+            const meas = dataset.semantic.measures.find(m => m.name === colName);
+            if (meas) return 'FLOAT';
         }
 
-        const meas = dataset.semantic.measures.find(m => m.name === colName);
-        if (meas) return 'FLOAT';
+        // Raw Mode (or fallback) - Check Dataset Schema
+        const col = dataset.schema.find(c => c.name === colName);
+        if (col) {
+            // Map Dataset types to generic types if needed, or return as is.
+            // Dataset types: 'string' | 'integer' | 'double' | 'boolean' | 'date' | 'timestamp'
+            const type = col.type.toLowerCase();
+            if (type === 'date') return 'DATE';
+            if (type === 'timestamp' || type === 'datetime') return 'TIMESTAMP';
+            if (type === 'integer') return 'INTEGER';
+            if (type === 'double' || type === 'float') return 'FLOAT';
+            return type.toUpperCase();
+        }
 
         return undefined;
     }
@@ -128,7 +96,10 @@ export class MetadataService {
      * Resolves formatting options for a column.
      */
     static getColumnFormat(dataset: Dataset | null, colName: string, mode: 'semantic' | 'raw' = 'raw'): FormatOptions | undefined {
-        if (!dataset || mode === 'raw') return undefined;
+        if (!dataset || mode === 'raw') {
+            // Raw mode default: no grouping for IDs/numbers
+            return { useThousandsSeparator: false };
+        }
         if (!dataset.semantic) return undefined;
 
         // Check Measures

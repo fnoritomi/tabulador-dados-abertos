@@ -1,0 +1,25 @@
+version: 1
+datasets:
+  - name: orders
+    description: Orders Dataset - TPC-H
+    sources:
+      - https://shell.duckdb.org/data/tpch/0_01/parquet/orders.parquet
+    columns:
+      - name: o_orderkey
+        type: integer
+      - name: o_custkey
+        type: integer
+      - name: o_orderstatus
+        type: string
+      - name: o_totalprice
+        type: double
+      - name: o_orderdate
+        type: date
+      - name: o_orderpriority
+        type: string
+      - name: o_clerk
+        type: string
+      - name: o_shippriority
+        type: integer
+      - name: o_comment
+        type: string

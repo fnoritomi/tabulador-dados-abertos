@@ -1,0 +1,32 @@
+version: 1
+defaults:
+  locale: "pt-BR"
+  timezone: "America/Sao_Paulo"
+
+  number_format:
+    use_grouping: true        # separador de milhar
+    notation: "standard"      # standard | compact
+    currency: null            # "BRL" opcional
+    percent: false
+
+  date_format:
+    pattern: "yyyy-MM-dd"     # ISO 8601 date
+    time_pattern: "yyyy-MM-dd HH:mm:ss" # ISO 8601-like timestamp (no T)
+    default_granularity: "day"  # day | month | year
+
+locales:
+  - code: "pt-BR"
+    currency: "BRL"
+    csv:
+      separator: ";"
+      encoding: "Windows-1252"
+  - code: "en-US"
+    currency: "USD"
+    csv:
+      separator: ","
+      encoding: "UTF-8"
+  - code: "es-ES"
+    currency: "EUR"
+    csv:
+      separator: ";"
+      encoding: "Windows-1252"

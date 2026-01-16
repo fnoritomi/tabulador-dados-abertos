@@ -1,0 +1,13 @@
+version: 1
+datasets:
+  - name: "ibge_municipios"
+    description: "Municípios IBGE"
+    relation: "ibge_municipios"   # nome da tabela/view no DuckDB
+    primary_key: ["id_municipio"]
+    columns:
+      - name: "id_municipio"
+        type: "integer"
+      - name: "nome"
+        type: "string"
+      - name: "uf"
+        type: "string"

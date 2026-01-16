@@ -1,0 +1,31 @@
+datasets:
+  - id: beneficiarios
+    name: Beneficiários
+    description: Beneficiários de Planos de Saúde (ANS)
+    path: datasets/beneficiarios.yaml
+  - id: demo
+    name: Demo Dataset (Lineitem)
+    description: TPC-H Lineitem Dataset
+    path: datasets/demo.yaml
+  - id: orders
+    name: Orders Dataset
+    description: TPC-H Orders Dataset
+    path: datasets/orders.yaml
+
+semantic_models:
+  - id: beneficiarios
+    name: Modelo Beneficiários
+    description: Modelo Semântico de Beneficiários
+    path: semantic_models/beneficiarios.yaml
+  - id: vendas
+    name: Fato Vendas
+    description: Modelo de Vendas (Mock)
+    path: semantic_models/vendas.yaml
+  - id: demo
+    name: Demo Semantic Model
+    description: TPC-H Lineitem Semantic Model
+    path: semantic_models/demo.yaml
+  - id: orders
+    name: Orders Semantic Model
+    description: TPC-H Orders Semantic Model
+    path: semantic_models/orders.yaml

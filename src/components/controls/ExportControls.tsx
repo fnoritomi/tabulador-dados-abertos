@@ -11,6 +11,7 @@ interface ExportControlsProps {
     queryState: QueryState;
     filters: any[];
     measureFilters: any[];
+    rawSql?: string;
     disabled?: boolean;
     onExportStart?: () => void;
     onExportEnd?: (result: { success: boolean; message?: string; details?: { time: number; sizeMB: number; url?: string } }) => void;
@@ -22,6 +23,7 @@ export const ExportControls: React.FC<ExportControlsProps> = ({
     db, activeDataset, queryState,
     filters,
     measureFilters,
+    rawSql,
     disabled = false,
     onExportStart,
     onExportEnd,
@@ -40,6 +42,7 @@ export const ExportControls: React.FC<ExportControlsProps> = ({
             queryState,
             filters,
             measureFilters,
+            rawSql,
             onStatus: onExportStatus,
             formattingConfig
         });

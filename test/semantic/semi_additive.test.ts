@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { DuckDbSqlBuilder } from '../../src/semantic/sql_builder_duckdb';
 import { registry } from '../../src/semantic/registry';
+import { DuckDbSqlBuilder } from '../../src/semantic/sql_builder_duckdb';
 import type { QueryIR, SemanticModel } from '../../src/semantic/types';
 
 // Mock Registry
@@ -31,7 +31,7 @@ const mockModel: SemanticModel = {
 (registry as any).models.set('inventory', mockModel);
 (registry as any).datasets.set('fact_inventory', { name: 'fact_inventory', relation: 'fact_inventory', columns: [] });
 
-const builder = new DuckDbSqlBuilder();
+const builder = new DuckDbSqlBuilder(registry);
 
 describe('Semi-Additive Measures', () => {
     it('should handle Semi-Additive Active (Global Window)', () => {

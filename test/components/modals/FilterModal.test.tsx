@@ -71,6 +71,6 @@ describe('FilterModal', () => {
         // Fix it
         fireEvent.change(input, { target: { value: '12' } });
         fireEvent.click(saveBtn);
-        expect(defaultProps.onSave).toHaveBeenCalledWith({ column: 'int_col', operator: '=', value: '12' });
+        expect(defaultProps.onSave).toHaveBeenCalledWith({ column: 'int_col', operator: '=', value: '12', granularity: 'day' });
     });
 });

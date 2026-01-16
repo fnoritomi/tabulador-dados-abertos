@@ -1,10 +1,12 @@
-import { registry } from './registry';
+import type { SemanticRegistry } from './registry';
 import type { QueryIR, SemanticModel, FilterCnd, OrderBy, Join, Measure } from './types';
 
 export class DuckDbSqlBuilder {
     private baseUrl: string;
+    private registry: SemanticRegistry;
 
-    constructor(baseUrl: string = '/') {
+    constructor(registry: SemanticRegistry, baseUrl: string = '/') {
+        this.registry = registry;
         // Normalize baseUrl to not end with slash? Or ensure it does?
         // Let's ensure it has trailing slash if it's not empty/root
         this.baseUrl = baseUrl.endsWith('/') ? baseUrl : `${baseUrl}/`;
@@ -13,19 +15,19 @@ export class DuckDbSqlBuilder {
     build(query: QueryIR, extraWhere?: string): string {
         // Explicit Mode Check
         if (query.mode === 'dataset') {
-            const dataset = registry.getDataset(query.semanticModel);
+            const dataset = this.registry.getDataset(query.semanticModel);
             if (!dataset) throw new Error(`Dataset ${query.semanticModel} not found`);
             return this.buildRawQuery(dataset, query, extraWhere);
         }
 
-        const model = registry.getModel(query.semanticModel);
+        const model = this.registry.getModel(query.semanticModel);
         if (!model) {
             // Fallback for compatibility if mode not set (or if semantic requested but not found)
             throw new Error(`Semantic Model ${query.semanticModel} not found`);
         }
 
         // Semantic Mode Logic
-        const mainDataset = registry.getDataset(model.model);
+        const mainDataset = this.registry.getDataset(model.model);
         let mainRelation = model.model;
 
         if (mainDataset) {
@@ -170,9 +172,9 @@ export class DuckDbSqlBuilder {
         const baseJoins: string[] = [];
         usedJoins.forEach((join, joinName) => {
             let joinRelation = join.model;
-            const refModel = registry.getModel(join.model);
+            const refModel = this.registry.getModel(join.model);
             if (refModel) {
-                const refDataset = registry.getDataset(refModel.model);
+                const refDataset = this.registry.getDataset(refModel.model);
                 if (refDataset) {
                     if (refDataset.sources && refDataset.sources.length > 0) {
                         const quoted = refDataset.sources.map(s => {
@@ -188,7 +190,7 @@ export class DuckDbSqlBuilder {
                 }
             } else {
                 // Fallback
-                const refDataset = registry.getDataset(join.model);
+                const refDataset = this.registry.getDataset(join.model);
                 if (refDataset) joinRelation = refDataset.relation || '';
             }
 
@@ -326,7 +328,7 @@ ${query.limit ? `LIMIT ${query.limit}` : ''}`;
     }
 
     buildEstimationQuery(query: QueryIR): string {
-        const model = registry.getModel(query.semanticModel);
+        const model = this.registry.getModel(query.semanticModel);
         if (!model) throw new Error(`Model ${query.semanticModel} not found`);
 
         const relevantDims = new Set([...query.dimensions]);
@@ -376,14 +378,14 @@ ${whereClause}
             }
         });
 
-        const mainDataset = registry.getDataset(model.model);
+        const mainDataset = this.registry.getDataset(model.model);
         const mainRelation = this.resolveRelation(model.model, mainDataset);
         const fromClause = `FROM ${mainRelation} AS ${model.alias || 't'}`;
 
         const joinClauses: string[] = [];
         usedJoins.forEach((join, joinName) => {
-            const joinModel = registry.getModel(join.model);
-            const joinDataset = registry.getDataset(joinModel?.model || join.model);
+            const joinModel = this.registry.getModel(join.model);
+            const joinDataset = this.registry.getDataset(joinModel?.model || join.model);
             const relation = this.resolveRelation(joinModel?.model || join.model, joinDataset);
             const type = joinTypes.get(joinName) || 'LEFT';
             joinClauses.push(`${type} JOIN ${relation} AS ${join.alias || join.name} ON ${join.on}`);
@@ -409,7 +411,7 @@ ${whereClause}
     }
 
     buildPartitionedQuery(query: QueryIR, bucketConfig: { bucketCount: number, bucketKeys: string[], bucketIndex: number }): string {
-        const model = registry.getModel(query.semanticModel);
+        const model = this.registry.getModel(query.semanticModel);
         if (!model) throw new Error("Model not found");
 
         const keyExprs = bucketConfig.bucketKeys.map(k => {
@@ -642,3 +644,4 @@ ${limitClause}`;
         return `WHERE ${conditions.join(' AND ')}`;
     }
 }
+

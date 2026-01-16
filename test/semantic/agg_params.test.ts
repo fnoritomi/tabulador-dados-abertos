@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { DuckDbSqlBuilder } from '../../src/semantic/sql_builder_duckdb';
 import { registry } from '../../src/semantic/registry';
+import { DuckDbSqlBuilder } from '../../src/semantic/sql_builder_duckdb';
 import type { QueryIR, SemanticModel } from '../../src/semantic/types';
 
 // Mock Registry
@@ -37,7 +37,7 @@ const mockModel: SemanticModel = {
 (registry as any).models.set('test_model', mockModel);
 (registry as any).datasets.set('source_table', { name: 'source_table', relation: 'source_table', columns: [] });
 
-const builder = new DuckDbSqlBuilder();
+const builder = new DuckDbSqlBuilder(registry);
 
 describe('Aggregation Parameters', () => {
     it('should generate correct SQL for different aggregation types', () => {

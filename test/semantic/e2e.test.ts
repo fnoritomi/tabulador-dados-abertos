@@ -50,7 +50,7 @@ describe('End-to-End Semantic Layer', () => {
             limit: 5
         };
 
-        const builder = new DuckDbSqlBuilder();
+        const builder = new DuckDbSqlBuilder(registry);
         // We need to inject the registry instance into the builder or use the singleton.
         // The builder imports the singleton `registry`.
         // So for this test to work with *my* registry instance, I need to update the singleton or make builder accept registry.

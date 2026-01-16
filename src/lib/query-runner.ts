@@ -21,8 +21,8 @@ export class QueryRunner {
 
     constructor(options: { baseUrl?: string | undefined, planner?: SafetyPlanner, builder?: DuckDbSqlBuilder }) {
         const baseUrl = options.baseUrl || '/';
-        this.planner = options.planner || new SafetyPlanner(baseUrl);
-        this.builder = options.builder || new DuckDbSqlBuilder(baseUrl);
+        this.planner = options.planner || new SafetyPlanner(registry, baseUrl);
+        this.builder = options.builder || new DuckDbSqlBuilder(registry, baseUrl);
     }
 
     async run(

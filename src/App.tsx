@@ -5,19 +5,16 @@ import { useQueryExecutor } from './hooks/useQueryExecutor';
 import { useAppQueryState } from './hooks/useAppQueryState';
 import { useDuckDBWarmup } from './hooks/useDuckDBWarmup';
 import { useTheme } from './hooks/useTheme';
+import { useAppConfig } from './hooks/useAppConfig';
 import { DuckDbSqlBuilder } from './semantic/sql_builder_duckdb';
-import { DatasetSelector } from './components/controls/DatasetSelector';
-import { QueryBuilderUI } from './components/controls/QueryBuilderUI';
-import { FilterList } from './components/controls/FilterList';
 import { ResultsView } from './components/data-display/ResultsView';
 
 import { Toolbar } from './components/layout/Toolbar';
 import { StatusMessage } from './components/feedback/StatusMessage';
-import { SqlEditor } from './components/controls/SqlEditor';
 import { SettingsMenu } from './components/layout/SettingsMenu';
 import { SqlPreviewModal } from './components/modals/SqlPreviewModal';
+import { Sidebar } from './components/layout/Sidebar';
 import type { QueryIR } from './semantic/types';
-import { setConfig, DEFAULT_CONFIG, type AppFormattingConfig } from './lib/formatting';
 
 // Adapter to match existing UI interfaces
 const adaptSelectionToContext = (id: string, registry: any, mode: 'dataset' | 'semantic') => {
@@ -72,12 +69,14 @@ function App() {
 
   // Locale State
   const [uiLocale, setUiLocale] = useState<string>('system');
-  const [loadedConfig, setLoadedConfig] = useState<AppFormattingConfig | null>(null);
+
+  // Load Config
+  const { effectiveConfig } = useAppConfig(registry, semanticReady, uiLocale);
+
 
   // Semantic State
   const [selectedModelId, setSelectedModelId] = useState<string>('');
 
-  // UI State
   // UI State
   const [sqlPreviewOpen, setSqlPreviewOpen] = useState(false);
 
@@ -113,22 +112,6 @@ function App() {
     return adaptSelectionToContext(selectedModelId, registry, qs.mode);
   }, [semanticReady, registry, selectedModelId, qs.mode]);
 
-
-  // Update Config when UI Locale changes
-  useEffect(() => {
-    if (!loadedConfig) return; // Wait for load
-
-    // Priority: UI (if not system) > Config > Browser
-    const newLocale = uiLocale === 'system'
-      ? (loadedConfig.locale || navigator.language)
-      : uiLocale;
-
-    setConfig({
-      ...loadedConfig,
-      locale: newLocale
-    });
-  }, [uiLocale, loadedConfig]);
-
   // Warmup Logic
   const { warmingUp, warmingUpTime } = useDuckDBWarmup(db, activeDatasetAdapter);
 
@@ -137,63 +120,6 @@ function App() {
   const [exportStatusMessage, setExportStatusMessage] = useState<string | null>(null);
   const [lastExportMessage, setLastExportMessage] = useState<{ text: string, type: 'success' | 'error' | 'info' } | null>(null);
 
-  // Helpers
-  // Removed unused isSemanticMode
-
-  // Load Config from Semantic Registry
-  useEffect(() => {
-    if (!semanticReady || !registry) return;
-
-    const systemConfig = registry.getConfig();
-    const defaults = systemConfig.defaults || {};
-    const overrides = systemConfig.overrides || {};
-
-    // 1. Resolve Locale Config
-    const localeCode = uiLocale === 'system' ? navigator.language : uiLocale;
-    let localeConfig = null;
-    if (systemConfig.locales) {
-      localeConfig = systemConfig.locales.find((l: any) => l.code === localeCode)
-        || systemConfig.locales.find((l: any) => l.code.split('-')[0] === localeCode.split('-')[0])
-        || systemConfig.locales[0];
-    }
-
-    // 2. Base Configuration (Global Defaults + Locale)
-    const baseConfig: AppFormattingConfig = {
-      locale: localeConfig ? localeConfig.code : (defaults.locale || 'pt-BR'),
-      currency: localeConfig?.currency || (defaults.number_format?.currency || 'BRL'),
-      csv: (localeConfig?.csv as any) || { separator: ';', encoding: 'UTF-8' as const },
-      defaults: {
-        date: {
-          pattern: defaults.date_format?.pattern
-        },
-        timestamp: {
-          pattern: defaults.date_format?.time_pattern // Map time_pattern to timestamp.pattern
-        },
-        number: {
-          ...defaults.number_format
-        }
-      }
-    };
-
-    // 3. Apply Overrides (Mandatory)
-    if (overrides.date_format?.pattern) {
-      if (!baseConfig.defaults!.date) baseConfig.defaults!.date = {};
-      baseConfig.defaults!.date!.pattern = overrides.date_format.pattern;
-    }
-    if (overrides.date_format?.time_pattern) {
-      if (!baseConfig.defaults!.timestamp) baseConfig.defaults!.timestamp = {};
-      baseConfig.defaults!.timestamp!.pattern = overrides.date_format.time_pattern;
-    }
-    if (overrides.number_format) {
-      baseConfig.defaults!.number = {
-        ...baseConfig.defaults!.number,
-        ...overrides.number_format
-      };
-    }
-
-    setLoadedConfig(baseConfig);
-
-  }, [semanticReady, registry, uiLocale]);
   // Reset local state when dataset changes
   useEffect(() => {
     cancelQuery();
@@ -233,7 +159,7 @@ function App() {
       // Ensure we don't double slash if base is just '/' and we append it
       const fullBaseUrl = `${origin}${base.endsWith('/') ? base : base + '/'}`;
 
-      const builder = new DuckDbSqlBuilder(fullBaseUrl);
+      const builder = new DuckDbSqlBuilder(registry, fullBaseUrl);
 
       // Build if we have selection OR if we are in dataset mode (default to *)
       if (qs.mode === 'dataset' || (queryIR && ((queryIR.columns && queryIR.columns.length > 0) || queryIR.dimensions.length > 0 || queryIR.measures.length > 0))) {
@@ -336,29 +262,10 @@ function App() {
     type: 'FLOAT' // Measures are almost always numbers
   })) || [];
 
-  // Calculate Config
-  const currentLocale = uiLocale === 'system' ? (loadedConfig?.locale || navigator.language) : uiLocale;
-
-  // Find locale definition in registry
-  const localeDef = loadedConfig?.locales?.find((l: any) =>
-    l.code === currentLocale ||
-    (currentLocale.includes('-') && l.code === currentLocale) || // exact match
-    l.code.startsWith(currentLocale.split('-')[0]) // lazy match pt-BR matches pt
-  );
-
-  const effectiveConfig: AppFormattingConfig = {
-    ...DEFAULT_CONFIG,
-    ...(loadedConfig || {}), // Global overrides
-    ...(localeDef || {}),    // Locale-specific overrides (currency, csv)
-    locale: currentLocale    // Ensure effective locale is current
-  };
 
   // Combine executor status with local status message
   // Priority: Executor Status > Local Status (Cancel/Export)
   const displayStatus = executorStatus || statusMessage;
-
-
-
 
   // Ctrl+Enter to Run Query
   useEffect(() => {
@@ -443,148 +350,29 @@ function App() {
       <div style={{ display: 'flex', flex: 1, overflow: 'hidden', gap: '20px', padding: '20px', background: 'var(--bg-app)' }}>
 
         {/* Sidebar */}
-        <aside style={{
-          width: '400px',
-          borderRight: '1px solid var(--border-color)',
-          display: 'flex',
-          flexDirection: 'column',
-          background: 'var(--bg-panel)',
-          flexShrink: 0,
-          borderRadius: '8px',
-          border: '1px solid var(--border-color)',
-          overflow: 'hidden'
-        }}>
-          {/* View Mode Tabs (Builder vs Editor) */}
-          <div style={{ display: 'flex', borderBottom: '1px solid var(--border-color)' }}>
-            <button
-              onClick={() => setViewMode('builder')}
-              style={{
-                flex: 1,
-                padding: '15px',
-                background: viewMode === 'builder' ? 'var(--bg-panel)' : 'var(--bg-app)',
-                border: 'none',
-                borderBottom: viewMode === 'builder' ? '2px solid var(--primary-color)' : 'none',
-                color: viewMode === 'builder' ? 'var(--text-main)' : 'gray',
-                cursor: 'pointer',
-                fontWeight: viewMode === 'builder' ? 'bold' : 'normal',
-                borderRadius: 0
-              }}
-            >
-              Query Builder
-            </button>
-            <button
-              onClick={() => setViewMode('editor')}
-              style={{
-                flex: 1,
-                padding: '15px',
-                background: viewMode === 'editor' ? 'var(--bg-panel)' : 'var(--bg-app)',
-                border: 'none',
-                borderBottom: viewMode === 'editor' ? '2px solid var(--primary-color)' : 'none',
-                color: viewMode === 'editor' ? 'var(--text-main)' : 'gray',
-                cursor: 'pointer',
-                fontWeight: viewMode === 'editor' ? 'bold' : 'normal',
-                borderRadius: 0
-              }}
-            >
-              SQL Editor
-            </button>
-          </div>
-
-          {/* Sidebar Content */}
-          <div style={{ flex: 1, overflowY: 'auto', padding: '15px' }}>
-
-            {/* Dataset Selector (common) */}
-            {viewMode === 'builder' && (
-              <div style={{ marginBottom: '20px' }}>
-                <DatasetSelector
-                  mode={qs.mode}
-                  onModeChange={qa.setMode}
-                  items={selectorItems}
-                  selectedId={selectedModelId}
-                  onSelect={setSelectedModelId}
-                  loading={!semanticReady}
-                />
-              </div>
-            )}
-
-            {semanticError && <div style={{ color: 'red', marginBottom: '10px' }}>Erro: {String(semanticError)}</div>}
-
-            {activeDatasetAdapter && (
-              <>
-                {viewMode === 'builder' ? (
-                  <>
-                    <QueryBuilderUI
-                      activeDataset={activeDatasetAdapter as any}
-                      selectedColumns={qs.selectedColumns}
-                      selectedDimensions={qs.selectedDimensions}
-                      selectedMeasures={qs.selectedMeasures}
-                      onToggleColumn={qa.toggleColumn}
-                      onToggleDimension={qa.toggleDimension}
-                      onSelectDimensions={qa.setDimensions}
-                      onToggleMeasure={qa.toggleMeasure}
-                    />
-
-                    <FilterList
-                      title={'Filtros de Dimensão (WHERE)'}
-                      filters={qs.filters}
-                      options={filterOptions as any}
-                      onAdd={handleAddFilter}
-                      onRemove={(id) => qa.removeFilter(id, 'dimension')}
-                      onUpdate={(id, f, v) => qa.updateFilter(id, f, v, 'dimension')}
-                      type="dimension"
-                      color="var(--text-main)"
-                      bgColor="var(--bg-app)"
-                      locale={effectiveConfig.locale}
-                    />
-
-                    {activeDatasetAdapter.semantic && (
-                      <FilterList
-                        title="Filtros de Medida (HAVING)"
-                        filters={qs.measureFilters}
-                        options={measureFilterOptions as any}
-                        onAdd={handleAddMeasureFilter}
-                        onRemove={(id) => qa.removeFilter(id, 'measure')}
-                        onUpdate={(id, f, v) => qa.updateFilter(id, f, v, 'measure')}
-                        type="measure"
-                        color="var(--text-main)"
-                        bgColor="var(--bg-app)"
-                        locale={effectiveConfig.locale}
-                      />
-                    )}
-
-                    {/* Limit & Preview Button */}
-                    <div style={{ marginTop: '20px', padding: '15px', background: 'var(--bg-panel-secondary)', borderRadius: '8px' }}>
-                      <div style={{ marginBottom: '15px' }}>
-                        <label style={{ fontWeight: 'bold', display: 'block', marginBottom: '5px' }}>Limite de Linhas</label>
-                        <input
-                          type="number"
-                          value={qs.limit}
-                          onChange={(e) => qa.setLimit(Number(e.target.value))}
-                          style={{ width: '100%', padding: '8px', boxSizing: 'border-box' }}
-                        />
-                      </div>
-                      <button
-                        onClick={() => setSqlPreviewOpen(true)}
-                        style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px' }}
-                      >
-                        Ver SQL Gerado
-                      </button>
-                    </div>
-                  </>
-                ) : (
-                  <div style={{ height: '100%' }}>
-                    <SqlEditor value={editorSql} onChange={setEditorSql} />
-                  </div>
-                )}
-              </>
-            )}
-          </div>
-        </aside>
+        <Sidebar
+          viewMode={viewMode}
+          setViewMode={setViewMode}
+          qs={qs}
+          qa={qa}
+          semanticReady={semanticReady}
+          semanticError={semanticError ? semanticError.message : null}
+          activeDatasetAdapter={activeDatasetAdapter}
+          selectorItems={selectorItems}
+          selectedModelId={selectedModelId}
+          setSelectedModelId={setSelectedModelId}
+          editorSql={editorSql}
+          setEditorSql={setEditorSql}
+          effectiveConfig={effectiveConfig}
+          handleAddFilter={handleAddFilter}
+          handleAddMeasureFilter={handleAddMeasureFilter}
+          setSqlPreviewOpen={setSqlPreviewOpen}
+          filterOptions={filterOptions}
+          measureFilterOptions={measureFilterOptions}
+        />
 
         {/* Main Content (Results) */}
         <main style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', position: 'relative', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'var(--bg-panel)' }}>
-
-
 
           <div style={{ flex: 1, overflow: 'hidden', padding: '0' }}>
             <ResultsView

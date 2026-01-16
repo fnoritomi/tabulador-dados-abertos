@@ -13,8 +13,8 @@ export interface PartitionPlan {
 export class SafetyPlanner {
     private builder: DuckDbSqlBuilder;
 
-    constructor(fullBaseUrl: string) {
-        this.builder = new DuckDbSqlBuilder(fullBaseUrl);
+    constructor(registry: import('../semantic/registry').SemanticRegistry, fullBaseUrl: string) {
+        this.builder = new DuckDbSqlBuilder(registry, fullBaseUrl);
     }
 
     /**

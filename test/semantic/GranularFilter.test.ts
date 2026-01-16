@@ -8,7 +8,7 @@ describe('DuckDbSqlBuilder - Granular Filters', () => {
     let builder: DuckDbSqlBuilder;
 
     beforeEach(() => {
-        builder = new DuckDbSqlBuilder();
+        builder = new DuckDbSqlBuilder(registry);
         // Mock Registry
         registry.registerModel({
             name: 'test_model', // Required by registry.registerModel

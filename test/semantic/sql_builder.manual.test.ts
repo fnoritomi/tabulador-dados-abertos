@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { DuckDbSqlBuilder } from '../../src/semantic/sql_builder_duckdb';
 import { registry } from '../../src/semantic/registry';
+import { DuckDbSqlBuilder } from '../../src/semantic/sql_builder_duckdb';
 import type { QueryIR, SemanticModel } from '../../src/semantic/types';
 
 // --- MOCK DATA ---
@@ -52,7 +52,7 @@ const mockSalesFact: SemanticModel = {
 (registry as any).datasets.set('dim_produto', { relation: 'main.dim_produto' });
 
 
-const builder = new DuckDbSqlBuilder();
+const builder = new DuckDbSqlBuilder(registry);
 
 // --- TESTS ---
 

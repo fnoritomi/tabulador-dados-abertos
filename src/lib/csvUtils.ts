@@ -115,7 +115,7 @@ export function arrowBatchToCsv(
         const row: string[] = [];
         for (let j = 0; j < numCols; j++) {
             const vec = batch.getChildAt(j);
-            const val = vec?.get(i);
+            let val = vec?.get(i);
             const colName = schema.fields[j].name;
             const colType = columnTypes[colName] as any;
 
@@ -127,6 +127,20 @@ export function arrowBatchToCsv(
                 ...override,
                 useThousandsSeparator: false
             };
+
+            // Fix for Arrow Date32 (Days)
+            // Arrow JS often returns "days from epoch" as a number for Date32 column
+            // We must convert this to milliseconds for Date constructor to work in formatValue
+            if (typeof val === 'number' && schema.fields[j].typeId === Type.Date) {
+                // Check if unit is DAY (0). If so, convert to millis.
+                // We access the underlying type object.
+                const type = schema.fields[j].type as any;
+                // DateUnit.DAY is 0. DateUnit.MILLISECOND is 1.
+                // We check if type exists (it should in real Arrow, but might be missing in mocks/partial schemas)
+                if (type && type.unit === 0) {
+                    val = val * 86400000;
+                }
+            }
 
             const formattedVal = formatValue(val, colType, formattingConfig, csvOverride);
 

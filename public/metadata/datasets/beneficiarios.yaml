@@ -5,6 +5,16 @@ datasets:
     sources:
       - data/beneficiarios/ben_202201.parquet
       - data/beneficiarios/ben_202202.parquet
+      - data/beneficiarios/ben_202203.parquet
+      - data/beneficiarios/ben_202204.parquet
+      - data/beneficiarios/ben_202205.parquet
+      - data/beneficiarios/ben_202206.parquet
+      - data/beneficiarios/ben_202207.parquet
+      - data/beneficiarios/ben_202208.parquet
+      - data/beneficiarios/ben_202209.parquet
+      - data/beneficiarios/ben_202210.parquet
+      - data/beneficiarios/ben_202211.parquet
+      - data/beneficiarios/ben_202212.parquet
     columns:
       - name: COMPETENCIA
         type: date

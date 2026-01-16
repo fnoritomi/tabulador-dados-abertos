@@ -115,7 +115,7 @@ const VirtualizedTable: React.FC<VirtualizedTableProps> = ({
     };
 
     return (
-        <div style={{ height: '400px', width: '100%', border: '1px solid var(--border-color)', borderRadius: '4px', background: 'var(--bg-app)' }}>
+        <div style={{ height: '100%', width: '100%', border: '1px solid var(--border-color)', borderRadius: '4px', background: 'var(--bg-app)' }}>
             <TableVirtuoso
                 data={data}
                 fixedHeaderContent={fixedHeaderContent}

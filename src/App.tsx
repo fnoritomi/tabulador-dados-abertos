@@ -10,12 +10,13 @@ import { DatasetSelector } from './components/controls/DatasetSelector';
 import { QueryBuilderUI } from './components/controls/QueryBuilderUI';
 import { FilterList } from './components/controls/FilterList';
 import { ResultsView } from './components/data-display/ResultsView';
-import { StatusBar } from './components/layout/StatusBar';
-import { ExecutionBar } from './components/controls/ExecutionBar';
+
+import { Toolbar } from './components/layout/Toolbar';
 import { StatusMessage } from './components/feedback/StatusMessage';
 import { SqlEditor } from './components/controls/SqlEditor';
+import { SettingsMenu } from './components/layout/SettingsMenu';
+import { SqlPreviewModal } from './components/modals/SqlPreviewModal';
 import type { QueryIR } from './semantic/types';
-import { format } from 'sql-formatter';
 import { setConfig, DEFAULT_CONFIG, type AppFormattingConfig } from './lib/formatting';
 
 // Adapter to match existing UI interfaces
@@ -52,7 +53,7 @@ function App() {
   const { theme, setTheme } = useTheme();
 
   // Hooks
-  const { db, status: dbStatus, version } = useDuckDB();
+  const { db } = useDuckDB();
   const { isReady: semanticReady, registry, error: semanticError } = useSemanticLayer();
 
   const {
@@ -77,7 +78,8 @@ function App() {
   const [selectedModelId, setSelectedModelId] = useState<string>('');
 
   // UI State
-  const [sqlPreviewExpanded, setSqlPreviewExpanded] = useState(false);
+  // UI State
+  const [sqlPreviewOpen, setSqlPreviewOpen] = useState(false);
 
   // Items List based on Mode
   const selectorItems = useMemo(() => {
@@ -333,199 +335,45 @@ function App() {
   // Priority: Executor Status > Local Status (Cancel/Export)
   const displayStatus = executorStatus || statusMessage;
 
+
+
+
+  // Ctrl+Enter to Run Query
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+        e.preventDefault();
+        handleRunQuery();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [handleRunQuery]);
+
   return (
-    <div style={{ padding: '20px', fontFamily: 'sans-serif' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <h1 style={{ margin: 0, fontSize: '1.5rem', color: 'var(--text-main)' }}>DuckDB WASM (Semantic Layer)</h1>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden', background: 'var(--bg-app)', color: 'var(--text-main)' }}>
 
-        <div style={{ display: 'flex', gap: '10px' }}>
-          {/* Locale Selector */}
-          <select
-            value={uiLocale}
-            onChange={(e) => setUiLocale(e.target.value)}
-            style={{
-              padding: '5px',
-              borderRadius: '4px',
-              cursor: 'pointer',
-              background: 'var(--bg-input)',
-              color: 'var(--text-main)',
-              border: '1px solid var(--border-color)'
-            }}
-            aria-label="Selecionar idioma"
-          >
-            <option value="system">Sistema ({navigator.language})</option>
-            <option value="pt-BR">Português (BR)</option>
-            <option value="en-US">English (US)</option>
-            <option value="es-ES">Español</option>
-          </select>
 
-          {/* Theme Toggle */}
-          <select
-            value={theme}
-            onChange={(e) => setTheme(e.target.value as any)}
-            style={{
-              padding: '5px',
-              borderRadius: '4px',
-              cursor: 'pointer',
-              background: 'var(--bg-input)',
-              color: 'var(--text-main)',
-              border: '1px solid var(--border-color)'
-            }}
-            aria-label="Selecionar tema"
-          >
-            <option value="system">Tema: Sistema</option>
-            <option value="light">Claro</option>
-            <option value="dark">Escuro</option>
-          </select>
+      {/* Header */}
+      <header style={{
+        height: '60px',
+        borderBottom: '1px solid var(--border-color)',
+        padding: '0 20px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        flexShrink: 0,
+        background: 'var(--bg-panel)'
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center' }}>
+          <h1 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 'bold' }}>DuckDB WASM</h1>
+          <span style={{ marginLeft: '10px', fontSize: '0.9rem', color: 'var(--text-secondary)' }}>Semantic Layer</span>
         </div>
-      </div>
 
-      <StatusBar dbStatus={dbStatus} version={version} />
-
-      {/* Tabs */}
-      <div style={{ display: 'flex', borderBottom: '1px solid var(--border-color)', marginBottom: '20px' }}>
-        <button
-          onClick={() => setViewMode('builder')}
-          style={{
-            padding: '10px 20px',
-            background: 'none',
-            border: 'none',
-            borderBottom: viewMode === 'builder' ? '2px solid var(--primary-color)' : 'none',
-            color: viewMode === 'builder' ? 'var(--text-main)' : 'gray',
-            cursor: 'pointer',
-            fontWeight: viewMode === 'builder' ? 'bold' : 'normal',
-            fontSize: '1rem'
-          }}
-        >
-          Query Builder
-        </button>
-        <button
-          onClick={() => setViewMode('editor')}
-          style={{
-            padding: '10px 20px',
-            background: 'none',
-            border: 'none',
-            borderBottom: viewMode === 'editor' ? '2px solid var(--primary-color)' : 'none',
-            color: viewMode === 'editor' ? 'var(--text-main)' : 'gray',
-            cursor: 'pointer',
-            fontWeight: viewMode === 'editor' ? 'bold' : 'normal',
-            fontSize: '1rem'
-          }}
-        >
-          SQL Editor
-        </button>
-      </div>
-
-      {viewMode === 'builder' && (
-        <DatasetSelector
-          mode={qs.mode}
-          onModeChange={qa.setMode}
-          items={selectorItems}
-          selectedId={selectedModelId}
-          onSelect={setSelectedModelId}
-          loading={!semanticReady}
-        />
-      )}
-
-      {semanticError && <div style={{ color: 'red' }}>Erro Semantic Layer: {String(semanticError)}</div>}
-
-      {activeDatasetAdapter && (
-        <>
-          {viewMode === 'builder' ? (
-            <>
-              <QueryBuilderUI
-                activeDataset={activeDatasetAdapter as any} // Cast to satisfy legacy props if needed
-                selectedColumns={qs.selectedColumns}
-                selectedDimensions={qs.selectedDimensions}
-                selectedMeasures={qs.selectedMeasures}
-                onToggleColumn={qa.toggleColumn}
-                onToggleDimension={qa.toggleDimension}
-                onSelectDimensions={qa.setDimensions}
-                onToggleMeasure={qa.toggleMeasure}
-              />
-
-              <FilterList
-                title={'Filtros de Dimensão (WHERE)'}
-                filters={qs.filters}
-                options={filterOptions as any}
-                onAdd={handleAddFilter}
-                onRemove={(id) => qa.removeFilter(id, 'dimension')}
-                onUpdate={(id, f, v) => qa.updateFilter(id, f, v, 'dimension')}
-                type="dimension"
-                color="var(--text-main)"
-                bgColor="var(--bg-panel-secondary)"
-              />
-
-              {activeDatasetAdapter.semantic && (
-                <FilterList
-                  title="Filtros de Medida (HAVING)"
-                  filters={qs.measureFilters}
-                  options={measureFilterOptions as any}
-                  onAdd={handleAddMeasureFilter}
-                  onRemove={(id) => qa.removeFilter(id, 'measure')}
-                  onUpdate={(id, f, v) => qa.updateFilter(id, f, v, 'measure')}
-                  type="measure"
-                  color="var(--text-main)"
-                  bgColor="var(--bg-panel-secondary)"
-                />
-              )}
-
-              {/* Limit & Preview */}
-              <div style={{ marginBottom: '20px' }}>
-                <div style={{ marginBottom: '10px' }}>
-                  <label style={{ fontWeight: 'bold', marginRight: '5px' }}>Limite:</label>
-                  <input
-                    type="number"
-                    value={qs.limit}
-                    onChange={(e) => qa.setLimit(Number(e.target.value))}
-                    style={{ padding: '5px', width: '80px', background: 'var(--bg-input)', color: 'var(--text-main)', border: '1px solid var(--border-color)' }}
-                  />
-                </div>
-
-                <div style={{ display: 'flex', alignItems: 'center', marginBottom: '5px' }}>
-                  <label
-                    style={{ fontWeight: 'bold', cursor: 'pointer', userSelect: 'none' }}
-                    onClick={() => setSqlPreviewExpanded(prev => !prev)}
-                  >
-                    SQL Preview
-                  </label>
-                  <button
-                    onClick={() => setSqlPreviewExpanded(prev => !prev)}
-                    style={{
-                      background: 'none',
-                      border: 'none',
-                      cursor: 'pointer',
-                      fontWeight: 'bold',
-                      color: 'var(--text-secondary)',
-                      padding: '0 5px',
-                      fontSize: '1.2em',
-                      marginLeft: '5px'
-                    }}
-                    title={sqlPreviewExpanded ? "Recolher Preview" : "Expandir Preview"}
-                  >
-                    {sqlPreviewExpanded ? '-' : '+'}
-                  </button>
-                </div>
-
-                {sqlPreviewExpanded && (
-                  <pre style={{ background: '#333', color: '#fff', padding: '10px', borderRadius: '4px', overflowX: 'auto', marginTop: '5px' }}>
-                    {generatedSql.startsWith('SELECT') || generatedSql.startsWith('WITH') ? format(generatedSql, { language: 'postgresql' }) : generatedSql}
-                  </pre>
-                )}
-              </div>
-            </>
-          ) : (
-            <div style={{ marginBottom: '20px' }}>
-              <SqlEditor value={editorSql} onChange={setEditorSql} />
-            </div>
-          )}
-
-          <ExecutionBar
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <Toolbar
             db={db}
-            activeDataset={activeDatasetAdapter as any}
             queryLoading={queryLoading}
-            queryCancelling={queryCancelling}
-            warmingUp={warmingUp}
             isExporting={isExporting}
             queryState={{
               selectedDatasetId: selectedModelId,
@@ -537,44 +385,223 @@ function App() {
             }}
             filters={qs.filters}
             measureFilters={qs.measureFilters}
-            rawSql={viewMode === 'editor' ? editorSql : undefined}
             onRunQuery={handleRunQuery}
             onCancelQuery={handleCancelQuery}
             onExportStart={handleExportStart}
             onExportEnd={handleExportEnd}
-            onExportStatus={setExportStatusMessage}
+            activeDataset={activeDatasetAdapter}
             formattingConfig={effectiveConfig}
           />
 
-          {/* Status Message Display */}
-          <div style={{ marginBottom: '20px', minHeight: '24px' }}>
-            <StatusMessage
-              warmingUp={warmingUp}
-              queryLoading={queryLoading}
-              queryCancelling={queryCancelling}
-              isExporting={isExporting}
-              statusMessage={displayStatus}
-              exportStatusMessage={exportStatusMessage}
-              lastExportMessage={lastExportMessage}
-              executionTime={executionTime}
-              warmingUpTime={warmingUpTime}
+          <div style={{ width: '1px', height: '20px', background: 'var(--border-color)', margin: '0 10px' }} />
+
+          {/* Settings */}
+          <SettingsMenu
+            theme={theme}
+            setTheme={setTheme}
+            uiLocale={uiLocale}
+            setUiLocale={setUiLocale}
+          />
+        </div>
+      </header>
+
+      {/* Main Layout (Sidebar + Content) */}
+      <div style={{ display: 'flex', flex: 1, overflow: 'hidden', gap: '20px', padding: '20px', background: 'var(--bg-app)' }}>
+
+        {/* Sidebar */}
+        <aside style={{
+          width: '400px',
+          borderRight: '1px solid var(--border-color)',
+          display: 'flex',
+          flexDirection: 'column',
+          background: 'var(--bg-panel)',
+          flexShrink: 0,
+          borderRadius: '8px',
+          border: '1px solid var(--border-color)',
+          overflow: 'hidden'
+        }}>
+          {/* View Mode Tabs (Builder vs Editor) */}
+          <div style={{ display: 'flex', borderBottom: '1px solid var(--border-color)' }}>
+            <button
+              onClick={() => setViewMode('builder')}
+              style={{
+                flex: 1,
+                padding: '15px',
+                background: viewMode === 'builder' ? 'var(--bg-panel)' : 'var(--bg-app)',
+                border: 'none',
+                borderBottom: viewMode === 'builder' ? '2px solid var(--primary-color)' : 'none',
+                color: viewMode === 'builder' ? 'var(--text-main)' : 'gray',
+                cursor: 'pointer',
+                fontWeight: viewMode === 'builder' ? 'bold' : 'normal',
+                borderRadius: 0
+              }}
+            >
+              Query Builder
+            </button>
+            <button
+              onClick={() => setViewMode('editor')}
+              style={{
+                flex: 1,
+                padding: '15px',
+                background: viewMode === 'editor' ? 'var(--bg-panel)' : 'var(--bg-app)',
+                border: 'none',
+                borderBottom: viewMode === 'editor' ? '2px solid var(--primary-color)' : 'none',
+                color: viewMode === 'editor' ? 'var(--text-main)' : 'gray',
+                cursor: 'pointer',
+                fontWeight: viewMode === 'editor' ? 'bold' : 'normal',
+                borderRadius: 0
+              }}
+            >
+              SQL Editor
+            </button>
+          </div>
+
+          {/* Sidebar Content */}
+          <div style={{ flex: 1, overflowY: 'auto', padding: '15px' }}>
+
+            {/* Dataset Selector (common) */}
+            {viewMode === 'builder' && (
+              <div style={{ marginBottom: '20px' }}>
+                <DatasetSelector
+                  mode={qs.mode}
+                  onModeChange={qa.setMode}
+                  items={selectorItems}
+                  selectedId={selectedModelId}
+                  onSelect={setSelectedModelId}
+                  loading={!semanticReady}
+                />
+              </div>
+            )}
+
+            {semanticError && <div style={{ color: 'red', marginBottom: '10px' }}>Erro: {String(semanticError)}</div>}
+
+            {activeDatasetAdapter && (
+              <>
+                {viewMode === 'builder' ? (
+                  <>
+                    <QueryBuilderUI
+                      activeDataset={activeDatasetAdapter as any}
+                      selectedColumns={qs.selectedColumns}
+                      selectedDimensions={qs.selectedDimensions}
+                      selectedMeasures={qs.selectedMeasures}
+                      onToggleColumn={qa.toggleColumn}
+                      onToggleDimension={qa.toggleDimension}
+                      onSelectDimensions={qa.setDimensions}
+                      onToggleMeasure={qa.toggleMeasure}
+                    />
+
+                    <FilterList
+                      title={'Filtros de Dimensão (WHERE)'}
+                      filters={qs.filters}
+                      options={filterOptions as any}
+                      onAdd={handleAddFilter}
+                      onRemove={(id) => qa.removeFilter(id, 'dimension')}
+                      onUpdate={(id, f, v) => qa.updateFilter(id, f, v, 'dimension')}
+                      type="dimension"
+                      color="var(--text-main)"
+                      bgColor="var(--bg-app)"
+                    />
+
+                    {activeDatasetAdapter.semantic && (
+                      <FilterList
+                        title="Filtros de Medida (HAVING)"
+                        filters={qs.measureFilters}
+                        options={measureFilterOptions as any}
+                        onAdd={handleAddMeasureFilter}
+                        onRemove={(id) => qa.removeFilter(id, 'measure')}
+                        onUpdate={(id, f, v) => qa.updateFilter(id, f, v, 'measure')}
+                        type="measure"
+                        color="var(--text-main)"
+                        bgColor="var(--bg-app)"
+                      />
+                    )}
+
+                    {/* Limit & Preview Button */}
+                    <div style={{ marginTop: '20px', padding: '15px', background: 'var(--bg-panel-secondary)', borderRadius: '8px' }}>
+                      <div style={{ marginBottom: '15px' }}>
+                        <label style={{ fontWeight: 'bold', display: 'block', marginBottom: '5px' }}>Limite de Linhas</label>
+                        <input
+                          type="number"
+                          value={qs.limit}
+                          onChange={(e) => qa.setLimit(Number(e.target.value))}
+                          style={{ width: '100%', padding: '8px', boxSizing: 'border-box' }}
+                        />
+                      </div>
+                      <button
+                        onClick={() => setSqlPreviewOpen(true)}
+                        style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px' }}
+                      >
+                        Ver SQL Gerado
+                      </button>
+                    </div>
+                  </>
+                ) : (
+                  <div style={{ height: '100%' }}>
+                    <SqlEditor value={editorSql} onChange={setEditorSql} />
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        </aside>
+
+        {/* Main Content (Results) */}
+        <main style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', position: 'relative', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'var(--bg-panel)' }}>
+
+
+
+          <div style={{ flex: 1, overflow: 'hidden', padding: '0' }}>
+            <ResultsView
+              result={result}
+              resultMode={resultMode}
+              activeDataset={activeDatasetAdapter as any}
+              formattingConfig={effectiveConfig}
             />
           </div>
 
-          {queryError && (
-            <div style={{ color: 'red', marginBottom: '20px', padding: '10px', border: '1px solid red', borderRadius: '4px' }}>
-              <strong>Erro na execução:</strong> {queryError}
+          {/* Global Footer / System Status */}
+          <div style={{
+            padding: '5px 20px',
+            borderTop: '1px solid var(--border-color)',
+            fontSize: '0.8rem',
+            color: 'var(--text-secondary)',
+            display: 'flex',
+            justifyContent: 'space-between',
+            background: 'var(--bg-panel)'
+          }}>
+            {/* Active Status Display in Footer */}
+            <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              {(warmingUp || queryLoading || isExporting || displayStatus || lastExportMessage || queryError) && (
+                <div style={{ fontSize: '0.9em' }}>
+                  {/* We reuse StatusMessage but might need to style it horizontally or compact */}
+                  <StatusMessage
+                    warmingUp={warmingUp}
+                    queryLoading={queryLoading}
+                    queryCancelling={queryCancelling}
+                    isExporting={isExporting}
+                    statusMessage={displayStatus}
+                    exportStatusMessage={exportStatusMessage}
+                    lastExportMessage={lastExportMessage}
+                    executionTime={executionTime}
+                    warmingUpTime={warmingUpTime}
+                  />
+                  {queryError && <span style={{ color: 'var(--color-error)', marginLeft: '10px' }}>Erro: {queryError}</span>}
+                </div>
+              )}
             </div>
-          )}
 
-          <ResultsView
-            result={result}
-            resultMode={resultMode}
-            activeDataset={activeDatasetAdapter as any}
-            formattingConfig={effectiveConfig}
-          />
-        </>
-      )}
+            {result && <div>{result.numRows} linhas</div>}
+          </div>
+        </main>
+      </div>
+
+      {/* Modals */}
+      <SqlPreviewModal
+        isOpen={sqlPreviewOpen}
+        onClose={() => setSqlPreviewOpen(false)}
+        sql={generatedSql}
+      />
+
     </div>
   );
 }

@@ -25,31 +25,16 @@ export const DatasetSelector: React.FC<DatasetSelectorProps> = ({
 }) => {
     return (
         <div style={{ marginBottom: '20px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-            <div style={{ display: 'flex', gap: '10px' }}>
-                <button
-                    onClick={() => onModeChange('dataset')}
-                    style={{
-                        fontWeight: mode === 'dataset' ? 'bold' : 'normal',
-                        backgroundColor: mode === 'dataset' ? '#eee' : 'transparent',
-                        border: '1px solid #ccc',
-                        padding: '5px 10px',
-                        cursor: 'pointer'
-                    }}
+            <div style={{ display: 'flex', alignItems: 'center' }}>
+                <label style={{ marginRight: '10px', fontWeight: 'bold' }}>Modo:</label>
+                <select
+                    value={mode}
+                    onChange={(e) => onModeChange(e.target.value as QueryMode)}
+                    style={{ padding: '8px', fontSize: '16px', borderRadius: '4px', flex: 1, width: '100%', maxWidth: '100%' }}
                 >
-                    Datasets (Raw)
-                </button>
-                <button
-                    onClick={() => onModeChange('semantic')}
-                    style={{
-                        fontWeight: mode === 'semantic' ? 'bold' : 'normal',
-                        backgroundColor: mode === 'semantic' ? '#eee' : 'transparent',
-                        border: '1px solid #ccc',
-                        padding: '5px 10px',
-                        cursor: 'pointer'
-                    }}
-                >
-                    Semantic Models
-                </button>
+                    <option value="dataset">Datasets (Raw)</option>
+                    <option value="semantic">Modelos Semânticos</option>
+                </select>
             </div>
 
             <div style={{ display: 'flex', alignItems: 'center' }}>
@@ -59,7 +44,7 @@ export const DatasetSelector: React.FC<DatasetSelectorProps> = ({
                 <select
                     value={selectedId}
                     onChange={(e) => onSelect(e.target.value)}
-                    style={{ padding: '8px', fontSize: '16px', borderRadius: '4px', flex: 1 }}
+                    style={{ padding: '8px', fontSize: '16px', borderRadius: '4px', flex: 1, width: '100%', maxWidth: '100%' }}
                     disabled={loading}
                 >
                     {!items.length && <option>Carregando...</option>}

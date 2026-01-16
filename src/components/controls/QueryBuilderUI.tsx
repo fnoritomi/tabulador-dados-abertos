@@ -356,7 +356,7 @@ export const QueryBuilderUI: React.FC<QueryBuilderUIProps> = ({
             {!activeDataset.semantic && (
                 <div style={{ flex: 1, minWidth: '300px', marginBottom: '20px', padding: '10px', border: '1px solid var(--border-color)', borderRadius: '4px', background: 'var(--bg-panel)' }}>
                     <h3 style={{ marginTop: 0, color: 'var(--text-main)' }}>Colunas (Raw)</h3>
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                         {activeDataset.schema.map(col => (
                             <label key={col.name} style={{ display: 'flex', alignItems: 'center', cursor: 'pointer', color: 'var(--text-main)' }}>
                                 <input

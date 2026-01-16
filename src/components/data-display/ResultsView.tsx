@@ -52,10 +52,7 @@ export const ResultsView: React.FC<ResultsViewProps> = ({ result, resultMode, ac
 
     return (
         <ErrorBoundary>
-            <div>
-                <p style={{ marginTop: '10px', color: '#666', fontWeight: 'bold' }}>
-                    Retornou {result.numRows} linhas.
-                </p>
+            <div style={{ height: '100%', width: '100%', overflow: 'hidden' }}>
                 <VirtualizedTable
                     data={result.toArray().map((row: any) => row.toJSON())}
                     schema={result.schema}

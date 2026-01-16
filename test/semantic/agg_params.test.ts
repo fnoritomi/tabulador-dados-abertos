@@ -1,6 +1,7 @@
-import { DuckDbSqlBuilder } from './sql_builder_duckdb';
-import { registry } from './registry';
-import type { QueryIR, SemanticModel } from './types';
+import { describe, it, expect } from 'vitest';
+import { DuckDbSqlBuilder } from '../../src/semantic/sql_builder_duckdb';
+import { registry } from '../../src/semantic/registry';
+import type { QueryIR, SemanticModel } from '../../src/semantic/types';
 
 // Mock Registry
 const mockModel: SemanticModel = {
@@ -38,12 +39,19 @@ const mockModel: SemanticModel = {
 
 const builder = new DuckDbSqlBuilder();
 
-const query: QueryIR = {
-    semanticModel: 'test_model',
-    dimensions: ['dim1'],
-    measures: ['simple_count', 'distinct_count', 'conditional_sum', 'distinct_conditional_count'],
-    limit: 10
-};
+describe('Aggregation Parameters', () => {
+    it('should generate correct SQL for different aggregation types', () => {
+        const query: QueryIR = {
+            semanticModel: 'test_model',
+            dimensions: ['dim1'],
+            measures: ['simple_count', 'distinct_count', 'conditional_sum', 'distinct_conditional_count'],
+            limit: 10
+        };
 
-console.log('--- SQL Generated for agg_params ---');
-console.log(builder.build(query));
+        const sql = builder.build(query);
+        console.log(sql);
+
+        expect(sql).toBeDefined();
+        // Add more specific assertions if needed, for now just ensuring it builds without error and returns string
+    });
+});

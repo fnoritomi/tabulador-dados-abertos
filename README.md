@@ -19,7 +19,7 @@ Este projeto é uma **Single Page Application (SPA)** que permite consultar, tab
 
 ## 2. Motivação e Casos de Uso
 
-O projeto nasceu para facilitar o acesso e a análise de **Dados Abertos Governamentais** (ex: SUS, Bolsa Família) que frequentemente são disponibilizados apenas como arquivos gigantes (CSV/Parquet), exigindo conhecimento técnico (Python/SQL) para serem consumidos.
+O projeto nasceu para facilitar o acesso e a análise de **Dados Abertos Governamentais** que frequentemente são disponibilizados apenas como arquivos gigantes (CSV/Json), exigindo conhecimento técnico (Python/SQL) para serem consumidos.
 
 ### Quem se beneficia?
 *   **Jornalistas de Dados**: Exploração rápida sem setup complexo.
@@ -31,7 +31,7 @@ O projeto nasceu para facilitar o acesso e a análise de **Dados Abertos Governa
 ## 3. Principais Funcionalidades
 
 *   📁 **Catálogo de Datasets**: Seleção via metadados configuráveis.
-*   ess **Camada Semântica**: Seleção de "Dimensões" (ex: Estado, Ano) e "Medidas" (ex: Qtde Beneficiários) ao invés de escrever SQL.
+*   🧠 **Camada Semântica**: Seleção de "Dimensões" (ex: Estado, Ano) e "Medidas" (ex: Qtde Beneficiários) ao invés de escrever SQL.
 *   🔍 **Filtros Dinâmicos**: Interfaces intuitivas para filtrar dados.
 *   📊 **Visualização**: Tabelas dinâmicas e gráficos interativos.
 *   💾 **Exportação**: Download dos resultados filtrados em CSV/Parquet.
@@ -54,24 +54,33 @@ O sistema utiliza uma arquitetura moderna baseada em WebAssembly.
 ## 5. Organização do Repositório
 
 ```text
+├─ docs/               # Documentação detalhada
 ├─ public/
-│  └─ metadata/        # Definições JSON dos datasets
-│     └─ datasets/
+│  ├─ data/            # Dados locais (para dev/demo)
+│  └─ metadata/        
+│     ├─ datasets/             # Definições de Dataset (Source/Schema)
+│     ├─ semantic_models/      # Modelos Semânticos (Dimensões/Medidas)
+│     ├─ config.yaml           # Configuração Global
+│     └─ manifest.yaml         # Manifesto de Datasets (auto-discovery)
 ├─ src/
 │  ├─ components/      # Componentes UI (React)
-│  ├─ lib/             # Utilitários e Tipos Principais
-│  ├─ services/
-│  │  ├─ semantic/     # Lógica de Metadados e SQL Builder
-│  │  └─ duckdb/       # Interface com o WASM
+│  ├─ hooks/           # Hooks customizados (Lógica e Estado)
+│  ├─ lib/             # Utilitários Core (SafetyPlanner, QueryRunner)
+│  ├─ semantic/        # Lógica da Camada Semântica (SQL Builder, Registry)
+│  ├─ services/        # Serviços de Infraestrutura (DuckDB, IO, Helpers)
 │  └─ App.tsx          # Ponto de entrada
-└─ docs/               # Documentação detalhada
+└─ test/               # Testes automatizados (Vitest)
+   ├─ components/      # Testes de componentes UI
+   ├─ hooks/           # Testes de hooks customizados
+   ├─ semantic/        # Testes da lógica de negócio e SQL
+   └─ services/        # Testes de serviços
 ```
 
 ---
 
 ## 6. Metadados e Camada Semântica
 
-A grande força do Tabulador é sua capacidade de abstrair a complexidade do SQL através de arquivos de metadados JSON.
+A grande força do Tabulador é sua capacidade de abstrair a complexidade do SQL através de arquivos de metadados YAML.
 
 *   **Dimensões**: Representam os eixos de análise (Group By). Podem ser simples ou hierárquicas.
 *   **Medidas**: Representam os valores agregados (Sum, Count). Suportam lógica semi-aditiva (ex: Saldos).
@@ -127,14 +136,14 @@ Você precisará do **Node.js** (v18+) instalado.
 
 ## 10. Como Adicionar um Novo Dataset
 
-O processo é simples e não requer alteração de código, apenas configuração JSON.
+O processo é simples e não requer alteração de código, apenas configuração YAML.
 
-1.  Crie um arquivo JSON em `public/metadata/datasets/`.
+1.  Crie um arquivo YAML em `public/metadata/datasets/`.
 2.  Defina a `source` (URL do Parquet) e o `schema`.
 3.  Configure as `dimensions` e `measures`.
-4.  Registre no índice principal.
+4.  O sistema carregará o dataset automaticamente (se configurado no manifest ou auto-discovery).
 
-👉 **[Passo-a-passo para Adicionar Datasets](docs/DATASET_REGISTRATION.md#validação)**
+👉 **[Passo-a-passo para Adicionar Datasets](docs/DATASET_REGISTRATION.md)**
 
 ---
 

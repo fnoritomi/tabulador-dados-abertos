@@ -60,56 +60,6 @@ export const FilterModal: React.FC<FilterModalProps> = ({
 
     const getSelectedColumnOption = () => options.find(o => o.name === column);
 
-    // Initialize state when modal opens or initialFilter changes
-    useEffect(() => {
-        if (isOpen) {
-            if (initialFilter) {
-                setColumn(initialFilter.column);
-                setOperator(initialFilter.operator);
-                setValue(initialFilter.value);
-                setGranularity(initialFilter.granularity || 'day');
-            } else {
-                // Default to first option
-                const first = options[0];
-                setColumn(first?.name || '');
-                setOperator(type === 'dimension' ? '=' : '>');
-                setValue('');
-                setGranularity('day');
-            }
-        }
-    }, [isOpen, initialFilter, options, type]);
-
-    // Update granularity when column changes
-    useEffect(() => {
-        const option = getSelectedColumnOption();
-        if (option?.granularities && option.granularities.length > 0) {
-            // Default to most granular or specific one? 
-            // Usually default to first available or 'month' if available
-            setGranularity(option.granularities[0]);
-        } else {
-            setGranularity('day');
-        }
-    }, [column, options]);
-
-    const handleSave = () => {
-        if (!column) return;
-
-        const colType = getColumnType(column);
-        const validationError = validate(value, colType);
-        if (validationError) {
-            setError(validationError);
-            return;
-        }
-
-        onSave({ column, operator, value, granularity });
-        onClose();
-    };
-
-    // Reset error on change
-    useEffect(() => {
-        setError(null);
-    }, [column, value]);
-
     const colType = getColumnType(column);
     const inputType = (colType === 'date' || colType === 'timestamp' || colType === 'time') ? 'date'
         : (['integer', 'bigint', 'float', 'double', 'decimal', 'number'].includes(colType)) ? 'number'
@@ -149,6 +99,107 @@ export const FilterModal: React.FC<FilterModalProps> = ({
             setValue(`${y}-${m}-${d}`);
         }
     };
+
+    // Initialize state when modal opens or initialFilter changes
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    useEffect(() => {
+        if (isOpen) {
+            if (initialFilter) {
+                setColumn(initialFilter.column);
+                setOperator(initialFilter.operator);
+                setValue(initialFilter.value);
+                setGranularity(initialFilter.granularity || 'day');
+            } else {
+                // Default to first option
+                const first = options[0];
+                setColumn(first?.name || '');
+                setOperator(type === 'dimension' ? '=' : '>');
+                setValue('');
+
+                // Initialize granularity based on first option
+                if (first?.granularities && first.granularities.length > 0) {
+                    setGranularity(first.granularities[0]);
+                } else {
+                    setGranularity('day');
+                }
+            }
+        }
+    }, [isOpen, initialFilter, options, type]); // options is dependency, assuming stable or memoized parent
+
+    // Update granularity when column changes
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    useEffect(() => {
+        // If we are editing (initialFilter present) AND the column is the same, keep existing granularity
+        if (initialFilter && initialFilter.column === column) {
+            return;
+        }
+
+        const option = options.find(o => o.name === column);
+        if (option?.granularities && option.granularities.length > 0) {
+            setGranularity(option.granularities[0]);
+        } else {
+            setGranularity('day');
+        }
+    }, [column, options, initialFilter]);
+
+    // Update value format when granularity changes
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    useEffect(() => {
+        if (!value) return;
+
+        const colType = getColumnType(column);
+        if (colType !== 'date' && colType !== 'timestamp' && colType !== 'time') return;
+
+        // Parse current value
+        let date: Date | null = null;
+        const parts = value.split('-');
+        if (parts.length >= 1) {
+            const y = parseInt(parts[0]);
+            const m = parts.length >= 2 ? parseInt(parts[1]) - 1 : 0;
+            const d = parts.length >= 3 ? parseInt(parts[2]) : 1;
+            date = new Date(y, m, d);
+        }
+
+        if (date && !isNaN(date.getTime())) {
+            const y = date.getFullYear();
+            const m = String(date.getMonth() + 1).padStart(2, '0');
+            const d = String(date.getDate()).padStart(2, '0');
+
+            let newValue = value;
+            if (granularity === 'year') {
+                if (value.length !== 4) newValue = `${y}`;
+            } else if (granularity === 'month' || granularity === 'quarter') {
+                if (value.length !== 7) newValue = `${y}-${m}`;
+            } else {
+                if (value.length !== 10) newValue = `${y}-${m}-${d}`;
+            }
+
+            if (newValue !== value) {
+                setValue(newValue);
+            }
+        }
+    }, [granularity, value]);
+
+    const handleSave = () => {
+        if (!column) return;
+
+        const colType = getColumnType(column);
+        const validationError = validate(value, colType);
+        if (validationError) {
+            setError(validationError);
+            return;
+        }
+
+        onSave({ column, operator, value, granularity });
+        onClose();
+    };
+
+    // Reset error on change
+    useEffect(() => {
+        setError(null);
+    }, [column, value]);
+
+
 
     // Group options logic
     const groupedOptions = options.reduce((acc, opt) => {

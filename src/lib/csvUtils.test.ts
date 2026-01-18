@@ -8,7 +8,8 @@ const createMockBatch = (data: any[], fields: any[]) => {
         schema: {
             fields: fields.map(f => ({
                 name: f.name,
-                typeId: f.typeId
+                typeId: f.typeId,
+                type: { typeId: f.typeId, unit: 0 } // Mock the type object
             }))
         },
         numRows: data.length,
@@ -39,7 +40,7 @@ describe('arrowBatchToCsv', () => {
         expect(csv).toContain('"with\nnewline"');
     });
 
-    it('should format dates using App Config (DD/MM/YYYY)', () => {
+    it('should format dates as yyyy-MM-dd for CSV', () => {
         // 2023-01-01
         const date = new Date(Date.UTC(2023, 0, 1));
         const data = [
@@ -52,14 +53,31 @@ describe('arrowBatchToCsv', () => {
         const batch = createMockBatch(data, fields);
         const csv = arrowBatchToCsv(batch, false);
 
-        expect(csv.trim()).toBe('01/01/2023');
+        expect(csv.trim()).toBe('2023-01-01');
+    });
+
+    it('should format timestamps as yyyy-MM-dd HH:mm:ss for CSV', () => {
+        // 2023-01-01 14:30:45
+        const date = new Date(Date.UTC(2023, 0, 1, 14, 30, 45));
+        const data = [
+            [date]
+        ];
+        const fields = [
+            { name: 'tsCol', typeId: Type.Timestamp }
+        ];
+
+        const batch = createMockBatch(data, fields);
+        const csv = arrowBatchToCsv(batch, false);
+
+        expect(csv.trim()).toBe('2023-01-01 14:30:45');
     });
 
     it('should handle Date numbers (epoch)', () => {
         const date = new Date(Date.UTC(2023, 0, 1));
         const epoch = date.getTime();
+        const days = epoch / 86400000;
         const data = [
-            [epoch]
+            [days]
         ];
         const fields = [
             { name: 'dateCol', typeId: Type.Date }
@@ -68,7 +86,7 @@ describe('arrowBatchToCsv', () => {
         const batch = createMockBatch(data, fields);
         const csv = arrowBatchToCsv(batch, false);
 
-        expect(csv.trim()).toBe('01/01/2023');
+        expect(csv.trim()).toBe('2023-01-01');
     });
 
     it('should replace null/undefined with empty string', () => {
@@ -168,5 +186,25 @@ describe('arrowBatchToCsv', () => {
         const csv = arrowBatchToCsv(batch, false, undefined, undefined, getColumnType);
 
         expect(csv.trim()).toBe('1234');
+    });
+
+    it('should map semantic type "time" to DATE and format accordingly', () => {
+        // 2022-01-01 -> 1640995200000
+        const timestamp = 1640995200000;
+        const data = [
+            [timestamp]
+        ];
+        const fields = [
+            { name: 'date_col', typeId: Type.Int } // Arrow might see it as Int/BigInt
+        ];
+        const batch = createMockBatch(data, fields);
+
+        // Metadata says it's 'time'
+        const getColumnType = (col: string) => col === 'date_col' ? 'time' : undefined;
+
+        const csv = arrowBatchToCsv(batch, false, undefined, undefined, getColumnType);
+
+        // Should be formatted as date, not raw number
+        expect(csv.trim()).toBe('2022-01-01');
     });
 });

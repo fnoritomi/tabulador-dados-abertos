@@ -449,65 +449,86 @@ ${whereClause}
     }
 
     private buildGranularCondition(fieldExpr: string, operator: string, value: string, granularity: string): string {
-        // Parse Value
-        // Expected formats: YYYY (Year), YYYY-MM (Month/Quarter), YYYY-MM-DD (Day)
-        const parts = value.split('-').map(Number);
-        const year = parts[0];
+        // Robust Parsing: handle input formats like "YYYY", "YYYY-MM", "YYYY-MM-DD" and default missing parts to 1.
 
-        let startDate: string = '';
-        let nextStart: string = '';
+        // 1. Parse Input
+        const parts = value.split(/[-/]/).map(p => parseInt(p, 10)).filter(n => !isNaN(n));
+        const year = parts[0] || new Date().getFullYear();
+        // Month is 1-indexed in string, we keep it 1-indexed for now
+        const month = parts[1] || 1;
+        const day = parts[2] || 1;
+
+        let startDateStr = '';
+        let nextStartStr = '';
+
+        const pad = (n: number) => String(n).padStart(2, '0');
 
         if (granularity === 'year') {
-            startDate = `${year}-01-01`;
-            nextStart = `${year + 1}-01-01`;
+            startDateStr = `${year}-01-01`;
+            nextStartStr = `${year + 1}-01-01`;
         } else if (granularity === 'quarter') {
-            const startMonth = parts[1];
-            let nextMonthVal = startMonth + 3;
-            let nextYear = year;
+            // Quarter logic depends on month. If month provided is 1, it's Q1. 
+            // If user selected "Q3" (not supported by UI yet, usually UI sends month of quarter start)
+            // Assuming UI sends YYYY-MM where MM is first month of quarter, or we map standard months.
+            // Simplified: Treat provided month as start of quarter block.
+            // If month=1 -> Q1 (1-3). next=4.
 
+            // Adjust month to be start of closest quarter? 
+            // Or assume input IS correct 1, 4, 7, 10.
+            // Let's assume input is a month, and we want that Quarter.
+            const qIndex = Math.floor((month - 1) / 3);
+            const startMonthVal = (qIndex * 3) + 1;
+            const nextMonthVal = startMonthVal + 3; // Overflow handled by Date or manual logic
+
+            // Handle year overflow
+            let nextYear = year;
+            let finalNextMonth = nextMonthVal;
             if (nextMonthVal > 12) {
-                nextMonthVal = 1;
+                finalNextMonth = 1;
                 nextYear = year + 1;
             }
 
-            const startMonthStr = String(startMonth).padStart(2, '0');
-            const nextMonthStr = String(nextMonthVal).padStart(2, '0');
-
-            startDate = `${year}-${startMonthStr}-01`;
-            nextStart = `${nextYear}-${nextMonthStr}-01`;
+            startDateStr = `${year}-${pad(startMonthVal)}-01`;
+            nextStartStr = `${nextYear}-${pad(finalNextMonth)}-01`;
 
         } else if (granularity === 'month') {
-            const month = parts[1];
             let nextMonthVal = month + 1;
             let nextYear = year;
-
             if (nextMonthVal > 12) {
                 nextMonthVal = 1;
                 nextYear = year + 1;
             }
+            startDateStr = `${year}-${pad(month)}-01`;
+            nextStartStr = `${nextYear}-${pad(nextMonthVal)}-01`;
 
-            const monthStr = String(month).padStart(2, '0');
-            const nextMonthStr = String(nextMonthVal).padStart(2, '0');
-
-            startDate = `${year}-${monthStr}-01`;
-            nextStart = `${nextYear}-${nextMonthStr}-01`;
         } else {
-            // Day or fallback
-            return `${fieldExpr} ${operator} '${value}'`;
+            // Day granularity -> Range covers 24h
+            // Start: YYYY-MM-DD 00:00:00
+            // End:   YYYY-MM-DD+1 00:00:00
+
+            // JS Date for easy adding
+            const d = new Date(Date.UTC(year, month - 1, day));
+            const nextD = new Date(Date.UTC(year, month - 1, day + 1));
+
+            startDateStr = d.toISOString().split('T')[0];
+            nextStartStr = nextD.toISOString().split('T')[0];
         }
 
+        // Construct Range Logic for (=)
+        // (=) means [start, next)
         if (operator === '=') {
-            return `(${fieldExpr} >= '${startDate}' AND ${fieldExpr} < '${nextStart}')`;
+            return `(${fieldExpr} >= '${startDateStr}' AND ${fieldExpr} < '${nextStartStr}')`;
         } else if (operator === '!=') {
-            return `(${fieldExpr} < '${startDate}' OR ${fieldExpr} >= '${nextStart}')`;
+            return `(${fieldExpr} < '${startDateStr}' OR ${fieldExpr} >= '${nextStartStr}')`;
         } else if (operator === '>') {
-            return `${fieldExpr} >= '${nextStart}'`;
+            return `${fieldExpr} >= '${nextStartStr}'`; // > DayX means >= DayX+1 ? Or strict > end of DayX? Yes.
         } else if (operator === '>=') {
-            return `${fieldExpr} >= '${startDate}'`;
+            return `${fieldExpr} >= '${startDateStr}'`;
         } else if (operator === '<') {
-            return `${fieldExpr} < '${startDate}'`;
+            return `${fieldExpr} < '${startDateStr}'`;
         } else if (operator === '<=') {
-            return `${fieldExpr} < '${nextStart}'`;
+            // <= DayX means < start of DayX+1
+            return `${fieldExpr} < '${nextStartStr}'`;
         }
 
         return `${fieldExpr} ${operator} '${value}'`;

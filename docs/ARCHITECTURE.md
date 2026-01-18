@@ -8,7 +8,7 @@ Este documento detalha o funcionamento interno do **Tabulador de Dados Abertos**
 
 O sistema segue um fluxo unidirecional de dados:
 
-1.  **Metadados**: A aplicação carrega definições de datasets (`JSON`) que descrevem schema físico e camada semântica.
+1.  **Metadados**: A aplicação carrega definições de datasets (`YAML`) que descrevem schema físico e camada semântica.
 2.  **Estado da Aplicação**: O usuário seleciona dimensões e medidas na UI, atualizando o `QueryState`.
 3.  **SQL Builder**: Um serviço converte o `QueryState` + Metadados em uma query SQL otimizada.
 4.  **DuckDB-WASM**: A query é executada no navegador, lendo arquivos Parquet remotos via HTTP Range Requests (ou arquivos locais).
@@ -25,7 +25,9 @@ O sistema segue um fluxo unidirecional de dados:
 
 ## 2. Geração de SQL
 
-O coração da aplicação é o `src/services/semantic/queryBuilder.ts`. Ele traduz intenções de negócio em SQL compatível com DuckDB.
+O coração da aplicação é o `src/semantic/sql_builder_duckdb.ts`. Ele traduz intenções de negócio em SQL compatível com DuckDB.
+
+A classe `DuckDbSqlBuilder` foi arquitetada para ser **isolada da camada de dados**, recebendo dependências (como o `SemanticRegistry`) via injeção. Isso facilita testes unitários e extensibilidade.
 
 ### Regras de Construção
 1.  **Dimensões**: Mapeadas para a cláusula `SELECT` e `GROUP BY`.
@@ -52,7 +54,7 @@ agregacao AS (
     FROM source_cte
     GROUP BY ALL
 )
-SELECT uf, saldo_final FROM agregacao LIMIT 1000
+SELECT "uf", "saldo_final" FROM agregacao LIMIT 1000
 ```
 
 ---
@@ -64,7 +66,8 @@ O DuckDB-WASM é inicializado como um Web Worker para não bloquear a thread pri
 ### Estratégias de Performance
 *   **Lazy Loading**: Apenas os bytes necessários dos arquivos Parquet são baixados (via HTTP Range Headers), graças ao formato colunar.
 *   **Async Connection**: Todas as consultas são assíncronas.
-*   **Virtual File System**: Mapeamento de URLs remotas para tabelas virtuais.
+*   **HTTP Range Requests**: O DuckDB-WASM acessa arquivos remotos diretamente via `read_parquet(['url'])`, baixando apenas os metadados e as colunas solicitadas (graças ao formato Parquet). Não há necessidade de carregar o arquivo inteiro em memória.
+*   **Safety Planner**: O arquivo `src/lib/safety-planner.ts` analisa a cardinalidade das consultas antes da execução pesada, prevenindo travamentos do navegador (OOM) ao particionar consultas gigantescas automaticamente.
 
 ---
 
